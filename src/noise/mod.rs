@@ -26,10 +26,12 @@ pub trait Noise<I, O> {
     /// Samples the noise function at this `input`.
     fn raw_sample(&self, input: I) -> O;
 
-    /// Samples the noise, converting it to `T`.
+    /// Samples the noise.
+    ///
+    /// This is separate from [`raw_sample`](Noise::raw_sample) for future proofing.
     #[inline]
-    fn sample<T: CorolatedNoiseType<O>>(&self, input: I) -> T {
-        T::map_from(self.raw_sample(input))
+    fn sample(&self, input: I) -> O {
+        self.raw_sample(input)
     }
 }
 
