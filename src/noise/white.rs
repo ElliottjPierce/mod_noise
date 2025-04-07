@@ -1,0 +1,1 @@
+//! Contains white noise.
