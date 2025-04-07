@@ -24,6 +24,7 @@ pub trait PeriodicNoise<P>: Noise<P, Output: PeriodicSegment<P>> {
         Self::Period: PeriodAndFrequency;
 
     /// Sets the [`Period`](PeriodicNoise::Period) of the noise.
+    #[inline]
     fn with_period(mut self, period: Self::Period) -> Self
     where
         Self: Sized,
@@ -33,6 +34,7 @@ pub trait PeriodicNoise<P>: Noise<P, Output: PeriodicSegment<P>> {
     }
 
     /// Sets the [`Period`](PeriodicNoise::Period) of the noise.
+    #[inline]
     fn with_frequency(mut self, frequency: Self::Period) -> Self
     where
         Self::Period: PeriodAndFrequency,
@@ -102,4 +104,16 @@ pub struct RelativePeriodicPoint<P> {
     pub offset: P,
     /// The loosely identifying seed of this point.
     pub seed: u32,
+}
+
+impl PeriodAndFrequency for f32 {
+    #[inline]
+    fn period_to_frequency(self) -> Self {
+        1.0 / self
+    }
+
+    #[inline]
+    fn frequency_to_period(self) -> Self {
+        1.0 / self
+    }
 }
