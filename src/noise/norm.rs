@@ -5,9 +5,16 @@ use core::ops::{
     MulAssign,
 };
 
+use super::{
+    CorolatedNoiseType,
+    NoiseValue,
+};
+
 /// An `f32` in range [0, 1)
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct UNorm(f32);
+
+impl NoiseValue for UNorm {}
 
 impl UNorm {
     /// Constructs a [`UNorm`] from arbetrary bits, returning unused `u8` bits.
@@ -50,5 +57,12 @@ impl MulAssign<UNorm> for UNorm {
     #[inline]
     fn mul_assign(&mut self, rhs: UNorm) {
         self.0 *= rhs.0;
+    }
+}
+
+impl CorolatedNoiseType<u32> for UNorm {
+    #[inline]
+    fn map_from(value: u32) -> Self {
+        Self::random(value)
     }
 }

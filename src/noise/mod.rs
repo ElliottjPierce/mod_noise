@@ -3,6 +3,16 @@
 pub mod norm;
 pub mod white;
 
+/// Marks the type as the value inolved in noise.
+pub trait NoiseValue: Sized + Clone + 'static {}
+
+/// Signifies that this type can be created from `T`.
+/// This is different from [`From`] because the numerical value it represents may change.
+pub trait CorolatedNoiseType<T>: NoiseValue {
+    /// Constructs a valid but corolated value based on this `value`.
+    fn map_from(value: T) -> Self;
+}
+
 /// Represents a noise function that samples at a point of type `I` and returns a result of type
 /// `O`.
 pub trait Noise<I, O> {
@@ -14,13 +24,6 @@ pub trait Noise<I, O> {
     fn sample<T: CorolatedNoiseType<O>>(&self, input: I) -> T {
         T::map_from(self.raw_sample(input))
     }
-}
-
-/// Signifies that this type can be created from `T`.
-/// This is different from [`From`] because the numerical value it represents may change.
-pub trait CorolatedNoiseType<T>: Sized + 'static {
-    /// Constructs a valid but corolated value based on this `value`.
-    fn map_from(value: T) -> Self;
 }
 
 /// Represents a differentiable [`Noise`].
@@ -48,6 +51,30 @@ impl<I, O, T: GradientNoise<I, O>> Noise<I, O> for T {
         self.sample_gradient(input).1
     }
 }
+
+macro_rules! impl_noise_value {
+    ($($name:ty),*) => {
+        $( impl NoiseValue for $name {} )*
+    };
+}
+
+impl_noise_value!(
+    u8,
+    i8,
+    u16,
+    i16,
+    u32,
+    i32,
+    u64,
+    i64,
+    u128,
+    i128,
+    f32,
+    bevy_math::Vec2,
+    bevy_math::Vec3,
+    bevy_math::Vec3A,
+    bevy_math::Vec4
+);
 
 #[cfg(test)]
 mod tests {
