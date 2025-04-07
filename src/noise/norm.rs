@@ -15,13 +15,13 @@ impl UNorm {
     pub fn random_with_entropy(bits: u32) -> (Self, u8) {
         // adapted from rand's `StandardUniform`
 
-        let fraction_bits = 32;
-        let float_size = mem::size_of::<f32>() as u32 * 8;
+        let fraction_bits = 23;
+        let float_size = size_of::<f32>() as u32 * 8;
         let precision = fraction_bits + 1;
-        let scale = 1f32 / ((1 << precision) as f32);
+        let scale = 1f32 / ((1u32 << precision) as f32);
 
         let value = bits >> (float_size - precision);
-        (Slef(scale * value), bits as u8)
+        (Self(scale * value as f32), bits as u8)
     }
 
     /// Constructs a [`UNorm`] from arbetrary bits.
@@ -49,6 +49,6 @@ impl Mul<UNorm> for UNorm {
 impl MulAssign<UNorm> for UNorm {
     #[inline]
     fn mul_assign(&mut self, rhs: UNorm) {
-        *self.0 *= rhs.0
+        self.0 *= rhs.0;
     }
 }

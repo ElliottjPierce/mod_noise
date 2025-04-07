@@ -29,30 +29,27 @@ macro_rules! impl_white {
         pub struct $name(pub $dt);
 
         impl<const N: usize> Noise< [$dt; N], $dt > for $name {
-
             #[inline(always)]
-            fn sample(&self, input: [$dt; N]) -> $dt {
+            fn raw_sample(&self, input: [$dt; N]) -> $dt {
                 let slice: &[$dt] = &input;
-                self.sample(slice)
+                self.raw_sample(slice)
             }
         }
 
         #[cfg(feature = "alloc")]
         impl Noise< Vec<$dt> , $dt> for $name {
-
             #[inline(always)]
-            fn sample(&self, input: Vec<$dt>) -> $dt {
+            fn raw_sample(&self, input: Vec<$dt>) -> $dt {
                 let slice: &[$dt] = &input;
-                self.sample(slice)
+                self.raw_sample(slice)
             }
         }
 
         impl Noise< Option<$dt> , $dt> for $name {
-
             #[inline(always)]
-            fn sample(&self, input: Option<$dt>) -> $dt {
+            fn raw_sample(&self, input: Option<$dt>) -> $dt {
                 if let Some(input) = input {
-                    self.sample([input])
+                    self.raw_sample([input])
                 } else {
                     $key
                 }
@@ -60,9 +57,8 @@ macro_rules! impl_white {
         }
 
         impl Noise<$dt, $dt> for $name {
-
             #[inline(always)]
-            fn sample(&self, input: $dt) -> $dt {
+            fn raw_sample(&self, input: $dt) -> $dt {
                     (input ^ self.0) // salt with the seed
                     .wrapping_mul($key) // multiply to remove any linear artifacts
                     .rotate_left(5) // multiplying large numbers like this tends to put more entropy on the more significant bits. This pushes that entropy to the least segnificant.
@@ -70,24 +66,22 @@ macro_rules! impl_white {
         }
 
         impl Noise<&'_ [$dt], $dt> for $name {
-
             #[inline(always)]
-            fn sample(&self, input: &[$dt]) -> $dt {
+            fn raw_sample(&self, input: &[$dt]) -> $dt {
                 let mut val: $dt = $key;
                 for v in input {
                     val = v.wrapping_mul(val) ^ $key // need xor to make it non-commutative to remove diagonal lines and multiplication to put each dimension on separate roders
                 }
-                self.sample(val)
+                self.raw_sample(val)
             }
         }
 
         $(
             impl Noise< $input, $dt > for $name {
-
                 #[inline(always)]
-                fn sample(&self, input: $input) -> $dt {
+                fn raw_sample(&self, input: $input) -> $dt {
                     let inner: $conv = input.into();
-                    self.sample(inner)
+                    self.raw_sample(inner)
                 }
             }
         )*
@@ -142,15 +136,15 @@ mod tests {
     #[test]
     fn check_u32() {
         let rng = White32(5);
-        let _tmp = rng.sample(8);
-        let _tmp = rng.sample([8, 2]);
-        let _tmp = rng.sample([8, 2, 4]);
-        let _tmp = rng.sample([8, 2, 9, 3]);
-        let _tmp = rng.sample(UVec2::new(1, 2));
-        let _tmp = rng.sample(UVec3::new(1, 2, 3));
-        let _tmp = rng.sample(UVec4::new(1, 2, 3, 4));
+        let _tmp = rng.raw_sample(8);
+        let _tmp = rng.raw_sample([8, 2]);
+        let _tmp = rng.raw_sample([8, 2, 4]);
+        let _tmp = rng.raw_sample([8, 2, 9, 3]);
+        let _tmp = rng.raw_sample(UVec2::new(1, 2));
+        let _tmp = rng.raw_sample(UVec3::new(1, 2, 3));
+        let _tmp = rng.raw_sample(UVec4::new(1, 2, 3, 4));
 
         #[cfg(feature = "alloc")]
-        let _tmp = rng.sample(alloc::vec![1, 2, 3, 4, 5]);
+        let _tmp = rng.raw_sample(alloc::vec![1, 2, 3, 4, 5]);
     }
 }
