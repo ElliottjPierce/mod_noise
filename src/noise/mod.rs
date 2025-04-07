@@ -1,10 +1,17 @@
 //! Contains various noise functions
 
+pub mod common_mapping;
 pub mod norm;
 pub mod white;
 
 /// Marks the type as the value inolved in noise.
-pub trait NoiseValue: Sized + Clone + 'static {}
+pub trait NoiseValue: Sized + Clone + 'static {
+    /// Maps this [`NoiseValue`] to `T`.
+    #[inline]
+    fn map_to<T: CorolatedNoiseType<Self>>(self) -> T {
+        T::map_from(self)
+    }
+}
 
 /// Signifies that this type can be created from `T`.
 /// This is different from [`From`] because the numerical value it represents may change.
@@ -53,7 +60,7 @@ impl<I, O, T: GradientNoise<I, O>> Noise<I, O> for T {
 }
 
 macro_rules! impl_noise_value {
-    ($($name:ty),*) => {
+    ($($name:ty),*,) => {
         $( impl NoiseValue for $name {} )*
     };
 }
@@ -73,7 +80,31 @@ impl_noise_value!(
     bevy_math::Vec2,
     bevy_math::Vec3,
     bevy_math::Vec3A,
-    bevy_math::Vec4
+    bevy_math::Vec4,
+    bevy_math::U8Vec2,
+    bevy_math::U8Vec3,
+    bevy_math::U8Vec4,
+    bevy_math::I8Vec2,
+    bevy_math::I8Vec3,
+    bevy_math::I8Vec4,
+    bevy_math::U16Vec2,
+    bevy_math::U16Vec3,
+    bevy_math::U16Vec4,
+    bevy_math::I16Vec2,
+    bevy_math::I16Vec3,
+    bevy_math::I16Vec4,
+    bevy_math::U64Vec2,
+    bevy_math::U64Vec3,
+    bevy_math::U64Vec4,
+    bevy_math::I64Vec2,
+    bevy_math::I64Vec3,
+    bevy_math::I64Vec4,
+    bevy_math::UVec2,
+    bevy_math::UVec3,
+    bevy_math::UVec4,
+    bevy_math::IVec2,
+    bevy_math::IVec3,
+    bevy_math::IVec4,
 );
 
 #[cfg(test)]
