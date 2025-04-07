@@ -45,6 +45,13 @@ pub trait WarpingNoise<I>: Noise<I, I> {
     fn warp_domain(&self, input: &mut I);
 }
 
+impl<T: NoiseValue> CorolatedNoiseType<T> for T {
+    #[inline]
+    fn map_from(value: T) -> Self {
+        value
+    }
+}
+
 impl<I: Copy + core::ops::AddAssign, T: Noise<I, I>> WarpingNoise<I> for T {
     #[inline]
     fn warp_domain(&self, input: &mut I) {
