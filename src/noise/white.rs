@@ -70,7 +70,7 @@ macro_rules! impl_white {
             fn raw_sample(&self, input: &[$dt]) -> $dt {
                 let mut val: $dt = $key;
                 for v in input {
-                    val = v.wrapping_mul(val) ^ $key // need xor to make it non-commutative to remove diagonal lines and multiplication to put each dimension on separate roders
+                    val = v.wrapping_mul(val) ^ $key // need xor to make it non-commutative to remove diagonal lines and multiplication to put each dimension on separate orders
                 }
                 self.raw_sample(val)
             }
