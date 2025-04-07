@@ -22,40 +22,45 @@ pub trait CorolatedNoiseType<T>: NoiseValue {
 
 /// Represents a noise function that samples at a point of type `I` and returns a result of type
 /// `O`.
-pub trait Noise<I, O> {
-    /// Samples the noise function at this `input`.
-    fn raw_sample(&self, input: I) -> O;
+pub trait Noise<I> {
+    /// The result of the noise.
+    type Output: NoiseValue;
 
-    /// Samples the noise, converting it to `T`.
+    /// Samples the noise function at this `input`.
+    fn raw_sample(&self, input: I) -> Self::Output;
+
+    /// Samples the noise.
+    ///
+    /// This is separate from [`raw_sample`](Noise::raw_sample) for future proofing.
     #[inline]
-    fn sample<T: CorolatedNoiseType<O>>(&self, input: I) -> T {
-        T::map_from(self.raw_sample(input))
+    fn sample(&self, input: I) -> Self::Output {
+        self.raw_sample(input)
     }
 }
 
 /// Represents a differentiable [`Noise`].
-pub trait GradientNoise<I, O>: Noise<I, O> {
+pub trait GradientNoise<I>: Noise<I> {
     /// Samples the noise at `input`, returning the gradient and the output.
-    fn sample_gradient(&self, input: I) -> (I, O);
+    fn sample_gradient(&self, input: I) -> (I, Self::Output);
 }
 
 /// Represents a [`Noise`] that can change its input instead of producing an output.
-pub trait WarpingNoise<I>: Noise<I, I> {
+pub trait WarpingNoise<I>: Noise<I, Output = I> {
     /// Warps or moves around the input value.
     fn warp_domain(&self, input: &mut I);
 }
 
-impl<I: Copy + core::ops::AddAssign, T: Noise<I, I>> WarpingNoise<I> for T {
+impl<T: NoiseValue> CorolatedNoiseType<T> for T {
     #[inline]
-    fn warp_domain(&self, input: &mut I) {
-        *input += self.raw_sample(*input);
+    fn map_from(value: T) -> Self {
+        value
     }
 }
 
-impl<I, O, T: GradientNoise<I, O>> Noise<I, O> for T {
+impl<I: Copy + core::ops::AddAssign, T: Noise<I, Output = I>> WarpingNoise<I> for T {
     #[inline]
-    fn raw_sample(&self, input: I) -> O {
-        self.sample_gradient(input).1
+    fn warp_domain(&self, input: &mut I) {
+        *input += self.raw_sample(*input);
     }
 }
 
@@ -77,6 +82,8 @@ impl_noise_value!(
     u128,
     i128,
     f32,
+    usize,
+    isize,
     bevy_math::Vec2,
     bevy_math::Vec3,
     bevy_math::Vec3A,
@@ -113,9 +120,18 @@ mod tests {
 
     struct NopNoise;
 
-    impl GradientNoise<f32, f32> for NopNoise {
+    impl Noise<f32> for NopNoise {
+        type Output = f32;
+
         #[inline]
-        fn sample_gradient(&self, input: f32) -> (f32, f32) {
+        fn raw_sample(&self, input: f32) -> Self::Output {
+            input
+        }
+    }
+
+    impl GradientNoise<f32> for NopNoise {
+        #[inline]
+        fn sample_gradient(&self, input: f32) -> (f32, Self::Output) {
             (0.0, input)
         }
     }
