@@ -1,0 +1,23 @@
+newline_style = "Unix"
+use_field_init_shorthand = true
+use_try_shorthand = true
+
+unstable_features = true # | for the following
+version = "Two"          # |
+#--------------------------------
+group_imports = "StdExternalCrate"
+imports_granularity = "Crate"
+imports_layout = "Vertical"
+comment_width = 100
+format_code_in_doc_comments = true
+format_macro_bodies = true
+format_macro_matchers = true
+format_strings = true
+normalize_doc_attributes = true
+wrap_comments = true
+
+# Unenforced rules
+# - file order:
+#       Files should read: modules, uses, types, traits, structs, impls, fns
+# - no super::X imports unless X is internal:
+#       if X is external, it should be imported from the external source instead of from super
