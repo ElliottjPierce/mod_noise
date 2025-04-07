@@ -18,7 +18,20 @@ macro_rules! impl_white {
         #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
         pub struct $name(pub $dt);
 
-        impl<const N: usize> Noise< [$dt; N], $dt > for $name {
+        impl Noise<$dt> for $name {
+            type Output = $dt;
+
+            #[inline(always)]
+            fn raw_sample(&self, input: $dt) -> $dt {
+                    (input ^ self.0) // salt with the seed
+                    .wrapping_mul($key) // multiply to remove any linear artifacts
+                    .rotate_left(5) // multiplying large numbers like this tends to put more entropy on the more significant bits. This pushes that entropy to the least segnificant.
+            }
+        }
+
+        impl<const N: usize> Noise< [$dt; N] > for $name {
+            type Output = $dt;
+
             #[inline(always)]
             fn raw_sample(&self, input: [$dt; N]) -> $dt {
                 let slice: &[$dt] = &input;
@@ -27,7 +40,9 @@ macro_rules! impl_white {
         }
 
         #[cfg(feature = "alloc")]
-        impl Noise< Vec<$dt> , $dt> for $name {
+        impl Noise< Vec<$dt> > for $name {
+            type Output = $dt;
+
             #[inline(always)]
             fn raw_sample(&self, input: Vec<$dt>) -> $dt {
                 let slice: &[$dt] = &input;
@@ -35,7 +50,9 @@ macro_rules! impl_white {
             }
         }
 
-        impl Noise< Option<$dt> , $dt> for $name {
+        impl Noise< Option<$dt> > for $name {
+            type Output = $dt;
+
             #[inline(always)]
             fn raw_sample(&self, input: Option<$dt>) -> $dt {
                 if let Some(input) = input {
@@ -46,16 +63,9 @@ macro_rules! impl_white {
             }
         }
 
-        impl Noise<$dt, $dt> for $name {
-            #[inline(always)]
-            fn raw_sample(&self, input: $dt) -> $dt {
-                    (input ^ self.0) // salt with the seed
-                    .wrapping_mul($key) // multiply to remove any linear artifacts
-                    .rotate_left(5) // multiplying large numbers like this tends to put more entropy on the more significant bits. This pushes that entropy to the least segnificant.
-            }
-        }
+        impl Noise<&'_ [$dt]> for $name {
+            type Output = $dt;
 
-        impl Noise<&'_ [$dt], $dt> for $name {
             #[inline(always)]
             fn raw_sample(&self, input: &[$dt]) -> $dt {
                 let mut val: $dt = $key;
@@ -67,7 +77,9 @@ macro_rules! impl_white {
         }
 
         $(
-            impl Noise< $input, $dt > for $name {
+            impl Noise< $input > for $name {
+                type Output = $dt;
+
                 #[inline(always)]
                 fn raw_sample(&self, input: $input) -> $dt {
                     let inner: $conv = input.into();
