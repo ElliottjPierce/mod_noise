@@ -14,7 +14,6 @@ bevy = "0.15"
 default = ["alloc"]
 alloc = ["rand/alloc"]
 
-
 [lints.clippy]
 doc_markdown = "warn"
 manual_let_else = "warn"
@@ -47,3 +46,7 @@ missing_docs = "warn"
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(docsrs_dep)'] }
 unsafe_op_in_unsafe_fn = "warn"
 unused_qualifications = "warn"
+
+[[example]]
+name = "show_noise"
+path = "examples/show_noise.rs"
