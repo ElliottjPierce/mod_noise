@@ -4,7 +4,13 @@ pub mod norm;
 pub mod white;
 
 /// Marks the type as the value inolved in noise.
-pub trait NoiseValue: Sized + Clone + 'static {}
+pub trait NoiseValue: Sized + Clone + 'static {
+    /// Maps this [`NoiseValue`] to `T`.
+    #[inline]
+    fn map_to<T: CorolatedNoiseType<Self>>(self) -> T {
+        T::map_from(self)
+    }
+}
 
 /// Signifies that this type can be created from `T`.
 /// This is different from [`From`] because the numerical value it represents may change.
