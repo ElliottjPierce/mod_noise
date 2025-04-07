@@ -9,11 +9,11 @@ ignore-hidden = false
 
 # Match Inside a Word - Case Insensitive
 [default.extend-words]
-LOD = "LOD"                             # Level of detail
+LOD = "LOD" # Level of detail
 
 # Match a Whole Word - Case Sensitive
 [default.extend-identifiers]
-ser = "ser"       # ron::ser - Serializer
+ser = "ser" # ron::ser - Serializer
 Pn = "Pn"
 
 [default]
