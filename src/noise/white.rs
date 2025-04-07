@@ -4,17 +4,7 @@
 use alloc::vec::Vec;
 
 use bevy_math::{
-    U8Vec2,
-    U8Vec3,
-    U8Vec4,
-    U16Vec2,
-    U16Vec3,
-    U16Vec4,
-    U64Vec2,
-    U64Vec3,
-    U64Vec4,
-    UVec2,
-    UVec3,
+    U8Vec2, U8Vec3, U8Vec4, U16Vec2, U16Vec3, U16Vec4, U64Vec2, U64Vec3, U64Vec4, UVec2, UVec3,
     UVec4,
 };
 

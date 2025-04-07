@@ -1,14 +1,8 @@
 //! Contains normalized float types.
 
-use core::ops::{
-    Mul,
-    MulAssign,
-};
+use core::ops::{Mul, MulAssign};
 
-use super::{
-    CorolatedNoiseType,
-    NoiseValue,
-};
+use super::{CorolatedNoiseType, NoiseValue};
 
 /// An `f32` in range [0, 1)
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]

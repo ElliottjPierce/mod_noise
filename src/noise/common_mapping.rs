@@ -1,9 +1,6 @@
 //! Contains common mapping.
 
-use super::{
-    CorolatedNoiseType,
-    NoiseValue,
-};
+use super::{CorolatedNoiseType, NoiseValue};
 
 /// easily implement mapping for integers
 macro_rules! impl_mapper {
