@@ -2,6 +2,7 @@
 
 pub mod common_mapping;
 pub mod norm;
+pub mod periodic;
 pub mod white;
 
 /// Marks the type as the value inolved in noise.
