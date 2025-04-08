@@ -1,12 +1,12 @@
 //! Periodic noise for orthogonal grids
 
-use bevy_math::{IVec2, IVec3, IVec4, UVec2, UVec3, UVec4, Vec2, Vec3, Vec3A, Vec4};
+use bevy_math::{Curve, IVec2, IVec3, IVec4, UVec2, UVec3, UVec4, Vec2, Vec3, Vec3A, Vec4};
 
 use super::{
     DirectNoise, Noise, NoiseValue,
     periodic::{
         Frequency, Period, PeriodicPoint, PeriodicPoints, PeriodicSegment, PowerOf2Period,
-        RelativePeriodicPoint, ScalableNoise, WholePeriod,
+        RelativePeriodicPoint, SamplablePeriodicPoints, ScalableNoise, WholePeriod,
     },
     white::White32,
 };
@@ -178,11 +178,16 @@ impl_grid_dimension!(UVec4, IVec4, Vec4, as_ivec4, as_vec4, with_int);
 impl GridSquare<UVec2, Vec2> {
     #[inline]
     fn corners(&self) -> [OrthoGridLattacePoint<UVec2, Vec2>; 4] {
+        self.corners_map(|x| x)
+    }
+
+    #[inline]
+    fn corners_map<T>(&self, mut f: impl FnMut(OrthoGridLattacePoint<UVec2, Vec2>) -> T) -> [T; 4] {
         [
-            self.from_offset(UVec2::new(0, 0)),
-            self.from_offset(UVec2::new(0, 1)),
-            self.from_offset(UVec2::new(1, 0)),
-            self.from_offset(UVec2::new(1, 1)),
+            f(self.from_offset(UVec2::new(0, 0))),
+            f(self.from_offset(UVec2::new(0, 1))),
+            f(self.from_offset(UVec2::new(1, 0))),
+            f(self.from_offset(UVec2::new(1, 1))),
         ]
     }
 }
@@ -190,15 +195,20 @@ impl GridSquare<UVec2, Vec2> {
 impl GridSquare<UVec3, Vec3> {
     #[inline]
     fn corners(&self) -> [OrthoGridLattacePoint<UVec3, Vec3>; 8] {
+        self.corners_map(|x| x)
+    }
+
+    #[inline]
+    fn corners_map<T>(&self, mut f: impl FnMut(OrthoGridLattacePoint<UVec3, Vec3>) -> T) -> [T; 8] {
         [
-            self.from_offset(UVec3::new(0, 0, 0)),
-            self.from_offset(UVec3::new(0, 0, 1)),
-            self.from_offset(UVec3::new(0, 1, 0)),
-            self.from_offset(UVec3::new(0, 1, 1)),
-            self.from_offset(UVec3::new(1, 0, 0)),
-            self.from_offset(UVec3::new(1, 0, 1)),
-            self.from_offset(UVec3::new(1, 1, 0)),
-            self.from_offset(UVec3::new(1, 1, 1)),
+            f(self.from_offset(UVec3::new(0, 0, 0))),
+            f(self.from_offset(UVec3::new(0, 0, 1))),
+            f(self.from_offset(UVec3::new(0, 1, 0))),
+            f(self.from_offset(UVec3::new(0, 1, 1))),
+            f(self.from_offset(UVec3::new(1, 0, 0))),
+            f(self.from_offset(UVec3::new(1, 0, 1))),
+            f(self.from_offset(UVec3::new(1, 1, 0))),
+            f(self.from_offset(UVec3::new(1, 1, 1))),
         ]
     }
 }
@@ -206,15 +216,23 @@ impl GridSquare<UVec3, Vec3> {
 impl GridSquare<UVec3, Vec3A> {
     #[inline]
     fn corners(&self) -> [OrthoGridLattacePoint<UVec3, Vec3A>; 8] {
+        self.corners_map(|x| x)
+    }
+
+    #[inline]
+    fn corners_map<T>(
+        &self,
+        mut f: impl FnMut(OrthoGridLattacePoint<UVec3, Vec3A>) -> T,
+    ) -> [T; 8] {
         [
-            self.from_offset(UVec3::new(0, 0, 0)),
-            self.from_offset(UVec3::new(0, 0, 1)),
-            self.from_offset(UVec3::new(0, 1, 0)),
-            self.from_offset(UVec3::new(0, 1, 1)),
-            self.from_offset(UVec3::new(1, 0, 0)),
-            self.from_offset(UVec3::new(1, 0, 1)),
-            self.from_offset(UVec3::new(1, 1, 0)),
-            self.from_offset(UVec3::new(1, 1, 1)),
+            f(self.from_offset(UVec3::new(0, 0, 0))),
+            f(self.from_offset(UVec3::new(0, 0, 1))),
+            f(self.from_offset(UVec3::new(0, 1, 0))),
+            f(self.from_offset(UVec3::new(0, 1, 1))),
+            f(self.from_offset(UVec3::new(1, 0, 0))),
+            f(self.from_offset(UVec3::new(1, 0, 1))),
+            f(self.from_offset(UVec3::new(1, 1, 0))),
+            f(self.from_offset(UVec3::new(1, 1, 1))),
         ]
     }
 }
@@ -222,23 +240,31 @@ impl GridSquare<UVec3, Vec3A> {
 impl GridSquare<UVec4, Vec4> {
     #[inline]
     fn corners(&self) -> [OrthoGridLattacePoint<UVec4, Vec4>; 16] {
+        self.corners_map(|x| x)
+    }
+
+    #[inline]
+    fn corners_map<T>(
+        &self,
+        mut f: impl FnMut(OrthoGridLattacePoint<UVec4, Vec4>) -> T,
+    ) -> [T; 16] {
         [
-            self.from_offset(UVec4::new(0, 0, 0, 0)),
-            self.from_offset(UVec4::new(0, 0, 0, 1)),
-            self.from_offset(UVec4::new(0, 0, 1, 0)),
-            self.from_offset(UVec4::new(0, 0, 1, 1)),
-            self.from_offset(UVec4::new(0, 1, 0, 0)),
-            self.from_offset(UVec4::new(0, 1, 0, 1)),
-            self.from_offset(UVec4::new(0, 1, 1, 0)),
-            self.from_offset(UVec4::new(0, 1, 1, 1)),
-            self.from_offset(UVec4::new(1, 0, 0, 0)),
-            self.from_offset(UVec4::new(1, 0, 0, 1)),
-            self.from_offset(UVec4::new(1, 0, 1, 0)),
-            self.from_offset(UVec4::new(1, 0, 1, 1)),
-            self.from_offset(UVec4::new(1, 1, 0, 0)),
-            self.from_offset(UVec4::new(1, 1, 0, 1)),
-            self.from_offset(UVec4::new(1, 1, 1, 0)),
-            self.from_offset(UVec4::new(1, 1, 1, 1)),
+            f(self.from_offset(UVec4::new(0, 0, 0, 0))),
+            f(self.from_offset(UVec4::new(0, 0, 0, 1))),
+            f(self.from_offset(UVec4::new(0, 0, 1, 0))),
+            f(self.from_offset(UVec4::new(0, 0, 1, 1))),
+            f(self.from_offset(UVec4::new(0, 1, 0, 0))),
+            f(self.from_offset(UVec4::new(0, 1, 0, 1))),
+            f(self.from_offset(UVec4::new(0, 1, 1, 0))),
+            f(self.from_offset(UVec4::new(0, 1, 1, 1))),
+            f(self.from_offset(UVec4::new(1, 0, 0, 0))),
+            f(self.from_offset(UVec4::new(1, 0, 0, 1))),
+            f(self.from_offset(UVec4::new(1, 0, 1, 0))),
+            f(self.from_offset(UVec4::new(1, 0, 1, 1))),
+            f(self.from_offset(UVec4::new(1, 1, 0, 0))),
+            f(self.from_offset(UVec4::new(1, 1, 0, 1))),
+            f(self.from_offset(UVec4::new(1, 1, 1, 0))),
+            f(self.from_offset(UVec4::new(1, 1, 1, 1))),
         ]
     }
 }
