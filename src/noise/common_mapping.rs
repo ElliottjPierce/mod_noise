@@ -12,14 +12,14 @@ macro_rules! impl_mapper {
             }
         }
 
-        impl<T: DirectNoise<$u>> DirectNoise<$s> for T {
-            type Output = <T as DirectNoise<$u>>::Output;
+        // impl<T: DirectNoise<$u>> DirectNoise<$s> for T {
+        //     type Output = <T as DirectNoise<$u>>::Output;
 
-            #[inline]
-            fn raw_sample(&self, input: $s) -> Self::Output {
-                DirectNoise::<$u>::raw_sample(self, input.map_to())
-            }
-        }
+        //     #[inline]
+        //     fn raw_sample(&self, input: $s) -> Self::Output {
+        //         DirectNoise::<$u>::raw_sample(self, input.map_to())
+        //     }
+        // }
     };
 }
 
@@ -39,14 +39,14 @@ macro_rules! impl_mapper_vec {
             }
         }
 
-        impl<T: DirectNoise<$u>> DirectNoise<$s> for T {
-            type Output = <T as DirectNoise<$u>>::Output;
+        // impl<T: DirectNoise<$u>> DirectNoise<$s> for T {
+        //     type Output = <T as DirectNoise<$u>>::Output;
 
-            #[inline]
-            fn raw_sample(&self, input: $s) -> Self::Output {
-                DirectNoise::<$u>::raw_sample(self, input.map_to())
-            }
-        }
+        //     #[inline]
+        //     fn raw_sample(&self, input: $s) -> Self::Output {
+        //         DirectNoise::<$u>::raw_sample(self, input.map_to())
+        //     }
+        // }
     };
 }
 
