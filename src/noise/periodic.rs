@@ -1,6 +1,6 @@
 //! Contains noise types that are periodic.
 
-use bevy_math::{Curve, curve::Ease};
+use bevy_math::{Curve, UVec2, Vec2, curve::Ease};
 
 use super::Noise;
 
@@ -116,4 +116,61 @@ impl PeriodAndFrequency for f32 {
     fn frequency_to_period(self) -> Self {
         1.0 / self
     }
+}
+
+/// A [`PeriodicNoise`] that produces [`GridSquare`]
+pub struct OrthoGrid {
+    frequency: f32,
+}
+
+/// Represents a grid square.
+pub struct GridSquare<Z, R> {
+    /// The least corner of this grid square.
+    pub least_corner: Z,
+    /// The positive offset from [`least_corner`](Self::least_corner) to the point in the grid square.
+    pub offset_from_corner: R,
+}
+
+pub struct OrthoGridLattacePoint<Z, R> {
+    /// Some corner of a [`GridSquare`].
+    pub corner: Z,
+    /// The offset from [`corner`](Self::corner) to the point in the [`GridSquare`].
+    pub offset: R,
+}
+
+macro_rules! impl_grid_dimension {
+    ($u:ty, $s:ty, $f:ty, $f_to_u:ident) => {
+        impl PeriodicPoint<$f> for OrthoGridLattacePoint<$u, $f> {
+            #[inline]
+            fn into_relative(self, entropy: u32) -> RelativePeriodicPoint<$f> {
+                RelativePeriodicPoint {
+                    offset: self.offset,
+                    seed: White32(entropy).sample(self.corner),
+                }
+            }
+        }
+
+        impl PeriodicPoints<$f> for GridSquare<$u, $f> {
+            #[inline]
+            fn into_relative(self, entropy: u32) -> RelativePeriodicPoint<$f> {
+                RelativePeriodicPoint {
+                    offset: self.offset,
+                    seed: White32(entropy).raw_sample(self.corner),
+                }
+            }
+        }
+
+        impl Noise<$f> for OrthoGrid {
+            type Output = GridSquare<$u, $f>;
+
+            #[inline]
+            fn raw_sample(&self, input: $f) -> Self::Output {
+                let scaled = input * self.frequency;
+                GridSquare {
+                    least_corner: scaled.$f_to_u(),
+                    offset_from_corner: scaled.fract_gl(),
+                }
+            }
+        }
+    };
 }
