@@ -1,14 +1,11 @@
 //! This module implements white noise inspiered by the [FxHash](https://crates.io/crates/fxhash)
 
-#[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-
 use bevy_math::{
     U8Vec2, U8Vec3, U8Vec4, U16Vec2, U16Vec3, U16Vec4, U64Vec2, U64Vec3, U64Vec4, UVec2, UVec3,
     UVec4,
 };
 
-use super::Noise;
+use super::{DirectNoise, Noise};
 
 /// This creates a white noise implementation
 macro_rules! impl_white {
@@ -18,7 +15,7 @@ macro_rules! impl_white {
         #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
         pub struct $name(pub $dt);
 
-        impl Noise<$dt> for $name {
+        impl DirectNoise<$dt> for $name {
             type Output = $dt;
 
             #[inline(always)]
@@ -29,7 +26,7 @@ macro_rules! impl_white {
             }
         }
 
-        impl<const N: usize> Noise< [$dt; N] > for $name {
+        impl<const N: usize> DirectNoise< [$dt; N] > for $name {
             type Output = $dt;
 
             #[inline(always)]
@@ -39,18 +36,7 @@ macro_rules! impl_white {
             }
         }
 
-        #[cfg(feature = "alloc")]
-        impl Noise< Vec<$dt> > for $name {
-            type Output = $dt;
-
-            #[inline(always)]
-            fn raw_sample(&self, input: Vec<$dt>) -> $dt {
-                let slice: &[$dt] = &input;
-                self.raw_sample(slice)
-            }
-        }
-
-        impl Noise< Option<$dt> > for $name {
+        impl DirectNoise< Option<$dt> > for $name {
             type Output = $dt;
 
             #[inline(always)]
@@ -63,7 +49,7 @@ macro_rules! impl_white {
             }
         }
 
-        impl Noise<&'_ [$dt]> for $name {
+        impl DirectNoise<&'_ [$dt]> for $name {
             type Output = $dt;
 
             #[inline(always)]
@@ -77,7 +63,7 @@ macro_rules! impl_white {
         }
 
         $(
-            impl Noise< $input > for $name {
+            impl DirectNoise< $input > for $name {
                 type Output = $dt;
 
                 #[inline(always)]
@@ -131,6 +117,104 @@ impl_white!(usize, WhiteUsize, 104_395_303,);
 #[cfg(target_pointer_width = "64")]
 impl_white!(usize, WhiteUsize, 982_451_653,);
 
+#[cfg(target_pointer_width = "32")]
+impl Noise for WhiteUsize {
+    #[inline]
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        self.0 = seed.next_seed() as usize;
+    }
+}
+
+#[cfg(target_pointer_width = "64")]
+impl Noise for WhiteUsize {
+    #[inline]
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        self.0 = White64(0).with_seed(seed).0 as usize;
+    }
+}
+
+impl Noise for White8 {
+    #[inline]
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        self.0 = seed.next_seed() as u8;
+    }
+}
+
+impl Noise for White16 {
+    #[inline]
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        self.0 = seed.next_seed() as u16;
+    }
+}
+
+impl Noise for White32 {
+    #[inline]
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        self.0 = seed.next_seed();
+    }
+}
+
+impl Noise for White64 {
+    #[inline]
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        self.0 = seed.next_seed() as u64 | ((seed.next_seed() as u64) << 32);
+    }
+}
+
+impl Noise for White128 {
+    #[inline]
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        self.0 = seed.next_seed() as u128
+            | ((seed.next_seed() as u128) << 32)
+            | ((seed.next_seed() as u128) << 64)
+            | ((seed.next_seed() as u128) << 96);
+    }
+}
+
+/// A light weight seed generator.
+/// This is a stripped down version of an Rng.
+pub struct SeedGenerator {
+    seed: White32,
+    entropy: u32,
+}
+
+impl SeedGenerator {
+    /// Gets the next seed in the generator.
+    #[inline]
+    pub fn next_seed(&mut self) -> u32 {
+        let next_seed = self.seed.raw_sample(self.entropy);
+        self.entropy = self.entropy.wrapping_add(1);
+        next_seed
+    }
+
+    /// Creates a different [`SeedGenerator`] that will yield values independent of this one.
+    #[inline]
+    pub fn branch(&mut self) -> Self {
+        Self::new(self.next_seed(), self.next_seed())
+    }
+
+    /// Creates a [`SeedGenerator`] with standard entropy from a seed.
+    #[inline]
+    pub fn new_from_seed(seed: u32) -> Self {
+        Self::new(seed, 0)
+    }
+
+    /// Creates a [`SeedGenerator`] with this entropy and seed.
+    #[inline]
+    pub fn new(seed: u32, entropy: u32) -> Self {
+        Self {
+            seed: White32(seed),
+            entropy,
+        }
+    }
+
+    /// Creates a [`SeedGenerator`] with entropy and seed from these `bits`.
+    #[inline]
+    pub fn new_from_u64(bits: u64) -> Self {
+        Self::new((bits >> 32) as u32, bits as u32)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -145,8 +229,6 @@ mod tests {
         let _tmp = rng.raw_sample(UVec2::new(1, 2));
         let _tmp = rng.raw_sample(UVec3::new(1, 2, 3));
         let _tmp = rng.raw_sample(UVec4::new(1, 2, 3, 4));
-
-        #[cfg(feature = "alloc")]
-        let _tmp = rng.raw_sample(alloc::vec![1, 2, 3, 4, 5]);
+        let _tmp = rng.raw_sample(alloc::vec![1u32, 2, 3, 4, 5].as_slice());
     }
 }

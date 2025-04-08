@@ -1,6 +1,6 @@
 //! Contains common mapping.
 
-use super::{CorolatedNoiseType, NoiseValue};
+use super::{CorolatedNoiseType, DirectNoise, NoiseValue};
 
 /// easily implement mapping for integers
 macro_rules! impl_mapper {
@@ -9,6 +9,15 @@ macro_rules! impl_mapper {
             #[inline]
             fn map_from(value: $s) -> Self {
                 (value as $u) ^ (1 << (<$u>::BITS - 1))
+            }
+        }
+
+        impl<T: DirectNoise<$u>> DirectNoise<$s> for T {
+            type Output = <T as DirectNoise<$u>>::Output;
+
+            #[inline]
+            fn raw_sample(&self, input: $s) -> Self::Output {
+                DirectNoise::<$u>::raw_sample(self, input.map_to())
             }
         }
     };
@@ -27,6 +36,15 @@ macro_rules! impl_mapper_vec {
             #[inline]
             fn map_from(value: $s) -> Self {
                 Self::from_array(value.to_array().map(|v| v.map_to()))
+            }
+        }
+
+        impl<T: DirectNoise<$u>> DirectNoise<$s> for T {
+            type Output = <T as DirectNoise<$u>>::Output;
+
+            #[inline]
+            fn raw_sample(&self, input: $s) -> Self::Output {
+                DirectNoise::<$u>::raw_sample(self, input.map_to())
             }
         }
     };

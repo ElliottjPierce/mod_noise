@@ -1,7 +1,11 @@
 //! Contains various noise functions
 
+use white::SeedGenerator;
+
 pub mod common_mapping;
+pub mod grid;
 pub mod norm;
+pub mod periodic;
 pub mod white;
 
 /// Marks the type as the value inolved in noise.
@@ -20,32 +24,51 @@ pub trait CorolatedNoiseType<T>: NoiseValue {
     fn map_from(value: T) -> Self;
 }
 
-/// Represents a noise function that samples at a point of type `I` and returns a result of type
-/// `O`.
-pub trait Noise<I> {
+/// Represents some noise function.
+pub trait Noise {
+    /// Samples the noise.
+    ///
+    /// This is separate from [`raw_sample`](Noise::raw_sample) for future proofing.
+    #[inline]
+    fn sample<I>(&self, input: I) -> Self::Output
+    where
+        Self: DirectNoise<I>,
+    {
+        self.raw_sample(input)
+    }
+
+    /// Sets the seed of the noise if applicable.
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        _ = seed;
+    }
+
+    /// Sets the seed of the noise if applicable.
+    fn with_seed(mut self, seed: &mut SeedGenerator) -> Self
+    where
+        Self: Sized,
+    {
+        self.set_seed(seed);
+        self
+    }
+}
+
+/// Represents a noise function that samples at a point of type `I` and returns a result.
+pub trait DirectNoise<I>: Noise {
     /// The result of the noise.
     type Output: NoiseValue;
 
     /// Samples the noise function at this `input`.
     fn raw_sample(&self, input: I) -> Self::Output;
-
-    /// Samples the noise.
-    ///
-    /// This is separate from [`raw_sample`](Noise::raw_sample) for future proofing.
-    #[inline]
-    fn sample(&self, input: I) -> Self::Output {
-        self.raw_sample(input)
-    }
 }
 
 /// Represents a differentiable [`Noise`].
-pub trait GradientNoise<I>: Noise<I> {
+pub trait GradientNoise<I>: DirectNoise<I> {
     /// Samples the noise at `input`, returning the gradient and the output.
     fn sample_gradient(&self, input: I) -> (I, Self::Output);
 }
 
 /// Represents a [`Noise`] that can change its input instead of producing an output.
-pub trait WarpingNoise<I>: Noise<I, Output = I> {
+pub trait WarpingNoise<I>: DirectNoise<I, Output = I> {
     /// Warps or moves around the input value.
     fn warp_domain(&self, input: &mut I);
 }
@@ -57,7 +80,7 @@ impl<T: NoiseValue> CorolatedNoiseType<T> for T {
     }
 }
 
-impl<I: Copy + core::ops::AddAssign, T: Noise<I, Output = I>> WarpingNoise<I> for T {
+impl<I: Copy + core::ops::AddAssign, T: DirectNoise<I, Output = I>> WarpingNoise<I> for T {
     #[inline]
     fn warp_domain(&self, input: &mut I) {
         *input += self.raw_sample(*input);
@@ -120,7 +143,9 @@ mod tests {
 
     struct NopNoise;
 
-    impl Noise<f32> for NopNoise {
+    impl Noise for NopNoise {}
+
+    impl DirectNoise<f32> for NopNoise {
         type Output = f32;
 
         #[inline]

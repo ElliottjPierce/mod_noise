@@ -7,5 +7,5 @@
 
 pub mod noise;
 
-#[cfg(feature = "alloc")]
+#[cfg(test)]
 extern crate alloc;
