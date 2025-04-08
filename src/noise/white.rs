@@ -131,6 +131,50 @@ impl_white!(usize, WhiteUsize, 104_395_303,);
 #[cfg(target_pointer_width = "64")]
 impl_white!(usize, WhiteUsize, 982_451_653,);
 
+/// A light weight seed generator.
+/// This is a stripped down version of an Rng.
+pub struct SeedGenerator {
+    seed: White32,
+    entropy: u32,
+}
+
+impl SeedGenerator {
+    /// Gets the next seed in the generator.
+    #[inline]
+    pub fn next_seed(&mut self) -> u32 {
+        let next_seed = self.seed.raw_sample(self.entropy);
+        self.entropy = self.entropy.wrapping_add(1);
+        next_seed
+    }
+
+    /// Creates a different [`SeedGenerator`] that will yield values independent of this one.
+    #[inline]
+    pub fn branch(&mut self) -> Self {
+        Self::new(self.next_seed(), self.next_seed())
+    }
+
+    /// Creates a [`SeedGenerator`] with standard entropy from a seed.
+    #[inline]
+    pub fn new_from_seed(seed: u32) -> Self {
+        Self::new(seed, 0)
+    }
+
+    /// Creates a [`SeedGenerator`] with this entropy and seed.
+    #[inline]
+    pub fn new(seed: u32, entropy: u32) -> Self {
+        Self {
+            seed: White32(seed),
+            entropy,
+        }
+    }
+
+    /// Creates a [`SeedGenerator`] with entropy and seed from these `bits`.
+    #[inline]
+    pub fn new_from_u64(bits: u64) -> Self {
+        Self::new((bits >> 32) as u32, bits as u32)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
