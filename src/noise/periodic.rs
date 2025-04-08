@@ -163,15 +163,3 @@ impl Default for PowerOf2Period {
         Self(1)
     }
 }
-
-// impl<T: PeriodicNoise<Frequency>> PeriodicNoise<Period> for T {
-//     #[inline]
-//     fn get_period(&self) -> Period {
-//         PeriodicNoise::<Frequency>::get_period(self).into()
-//     }
-
-//     #[inline]
-//     fn set_period(&mut self, period: Period) {
-//         PeriodicNoise::<Frequency>::set_period(self, period.into());
-//     }
-// }
