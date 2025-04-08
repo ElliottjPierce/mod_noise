@@ -1,18 +1,16 @@
 //! Periodic noise for orthogonal grids
 
-use bevy_math::{IVec2, UVec2, UVec3, UVec4, Vec2, Vec3, Vec3A, Vec4};
+use bevy_math::{UVec2, UVec3, UVec4, Vec2, Vec3, Vec3A, Vec4};
 
 use super::{
     DirectNoise, Noise, NoiseValue,
-    periodic::{PeriodicPoint, PeriodicPoints, RelativePeriodicPoint},
+    periodic::{Frequency, PeriodicPoint, PeriodicPoints, RelativePeriodicPoint},
     white::White32,
 };
 
-/// A [`PeriodicNoise`] that produces [`GridSquare`]
+/// A [`PeriodicNoise`] that produces [`GridSquare`] using [`Frequency`]
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct OrthoGrid {
-    frequency: f32,
-}
+pub struct OrthoGrid(pub Frequency);
 
 /// Represents a grid square.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -62,7 +60,7 @@ macro_rules! impl_grid_dimension {
 
             #[inline]
             fn raw_sample(&self, input: $f) -> Self::Output {
-                let scaled = input * self.frequency;
+                let scaled = input * self.0.0;
                 GridSquare {
                     least_corner: scaled.$f_to_u(),
                     offset_from_corner: scaled.fract_gl(),
