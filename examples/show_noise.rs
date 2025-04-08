@@ -68,6 +68,7 @@ fn main() -> AppExit {
         .add_systems(
             Startup,
             |mut commands: Commands, mut images: ResMut<Assets<Image>>| {
+                let dummy_image = images.add(Image::default_uninit());
                 let mut noise = NoiseOptions {
                     options: vec![NoiseOption {
                         name: "Basic white noise",
@@ -76,7 +77,7 @@ fn main() -> AppExit {
                         noise: Box::new(CellularNoise::<OrthoGrid, Adapter<UNorm>>::default()),
                     }],
                     selected: 0,
-                    image: Handle::weak_from_u128(0),
+                    image: dummy_image,
                 };
                 let mut image = Image::new_fill(
                     Extent3d {
