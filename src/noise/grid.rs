@@ -5,8 +5,8 @@ use bevy_math::{UVec2, UVec3, UVec4, Vec2, Vec3, Vec3A, Vec4};
 use super::{
     DirectNoise, Noise, NoiseValue,
     periodic::{
-        Frequency, PeriodicPoint, PeriodicPoints, PowerOf2Period, RelativePeriodicPoint,
-        WholePeriod,
+        Frequency, PeriodicNoise, PeriodicPoint, PeriodicPoints, PowerOf2Period,
+        RelativePeriodicPoint, WholePeriod,
     },
     white::White32,
 };
@@ -200,5 +200,41 @@ impl PeriodicPoints<Vec4> for GridSquare<UVec4, Vec4> {
             self.from_offset(UVec4::new(1, 1, 1, 1)),
         ]
         .into_iter()
+    }
+}
+
+impl PeriodicNoise<Frequency> for OrthoGrid {
+    #[inline]
+    fn get_period(&self) -> Frequency {
+        self.0
+    }
+
+    #[inline]
+    fn set_period(&mut self, period: Frequency) {
+        self.0 = period;
+    }
+}
+
+impl PeriodicNoise<WholePeriod> for OrthoGridInteger {
+    #[inline]
+    fn get_period(&self) -> WholePeriod {
+        self.0
+    }
+
+    #[inline]
+    fn set_period(&mut self, period: WholePeriod) {
+        self.0 = period;
+    }
+}
+
+impl PeriodicNoise<PowerOf2Period> for OrthoGridPowerOf2 {
+    #[inline]
+    fn get_period(&self) -> PowerOf2Period {
+        self.0
+    }
+
+    #[inline]
+    fn set_period(&mut self, period: PowerOf2Period) {
+        self.0 = period;
     }
 }
