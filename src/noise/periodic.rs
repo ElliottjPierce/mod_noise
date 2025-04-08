@@ -1,56 +1,25 @@
 //! Contains noise types that are periodic.
 
-use bevy_math::{Curve, UVec2, Vec2, curve::Ease};
+use bevy_math::{Curve, curve::Ease};
 
-use super::DirectNoise;
+use super::Noise;
 
-/// Represents a [`Noise`] that divides its domain into [`PeriodicSegment`].
-pub trait PeriodicNoise<P>: DirectNoise<P, Output: PeriodicSegment<P>> {
-    /// The interval over which values may repeat.
-    type Period: Clone + 'static;
-
+/// Represents a [`Noise`] that divides its domain into [`PeriodicSegment`] according to some period `T`.
+pub trait PeriodicNoise<T>: Noise {
     /// Gets the [`Period`](PeriodicNoise::Period) of the noise.
-    fn get_period(&self) -> Self::Period;
+    fn get_period(&self) -> T;
     /// Sets the [`Period`](PeriodicNoise::Period) of the noise.
-    fn set_period(&mut self, period: Self::Period);
-
-    /// Gets the [`Period`](PeriodicNoise::Period) of the noise.
-    fn get_frequency(&self) -> Self::Period
-    where
-        Self::Period: PeriodAndFrequency;
-    /// Sets the [`Period`](PeriodicNoise::Period) of the noise.
-    fn set_frequency(&mut self, frequency: Self::Period)
-    where
-        Self::Period: PeriodAndFrequency;
+    fn set_period(&mut self, period: T);
 
     /// Sets the [`Period`](PeriodicNoise::Period) of the noise.
     #[inline]
-    fn with_period(mut self, period: Self::Period) -> Self
+    fn with_period(mut self, period: T) -> Self
     where
         Self: Sized,
     {
         self.set_period(period);
         self
     }
-
-    /// Sets the [`Period`](PeriodicNoise::Period) of the noise.
-    #[inline]
-    fn with_frequency(mut self, frequency: Self::Period) -> Self
-    where
-        Self::Period: PeriodAndFrequency,
-        Self: Sized,
-    {
-        self.set_frequency(frequency);
-        self
-    }
-}
-
-/// Represents a period that can be inverted into a frequency.
-pub trait PeriodAndFrequency {
-    /// Converts this period to a frequency.
-    fn period_to_frequency(self) -> Self;
-    /// Converts this frequency to a period.
-    fn frequency_to_period(self) -> Self;
 }
 
 /// Represents a segment of a noise result.
@@ -106,71 +75,95 @@ pub struct RelativePeriodicPoint<P> {
     pub seed: u32,
 }
 
-impl PeriodAndFrequency for f32 {
+/// Represents a period of this value.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Period(pub f32);
+
+impl Default for Period {
     #[inline]
-    fn period_to_frequency(self) -> Self {
-        1.0 / self
+    fn default() -> Self {
+        Self(2.0)
     }
+}
 
+impl From<Frequency> for Period {
     #[inline]
-    fn frequency_to_period(self) -> Self {
-        1.0 / self
+    fn from(value: Frequency) -> Self {
+        Self(1.0 / value.0)
     }
 }
 
-/// A [`PeriodicNoise`] that produces [`GridSquare`]
-pub struct OrthoGrid {
-    frequency: f32,
+impl From<WholePeriod> for Period {
+    #[inline]
+    fn from(value: WholePeriod) -> Self {
+        Self(value.0 as f32)
+    }
 }
 
-/// Represents a grid square.
-pub struct GridSquare<Z, R> {
-    /// The least corner of this grid square.
-    pub least_corner: Z,
-    /// The positive offset from [`least_corner`](Self::least_corner) to the point in the grid square.
-    pub offset_from_corner: R,
+impl From<PowerOf2Period> for Period {
+    #[inline]
+    fn from(value: PowerOf2Period) -> Self {
+        Self::from(Into::<WholePeriod>::into(value))
+    }
 }
 
-pub struct OrthoGridLattacePoint<Z, R> {
-    /// Some corner of a [`GridSquare`].
-    pub corner: Z,
-    /// The offset from [`corner`](Self::corner) to the point in the [`GridSquare`].
-    pub offset: R,
+/// Represents a frequency of this value.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Frequency(pub f32);
+
+impl Default for Frequency {
+    #[inline]
+    fn default() -> Self {
+        Self(0.5)
+    }
 }
 
-macro_rules! impl_grid_dimension {
-    ($u:ty, $s:ty, $f:ty, $f_to_u:ident) => {
-        impl PeriodicPoint<$f> for OrthoGridLattacePoint<$u, $f> {
-            #[inline]
-            fn into_relative(self, entropy: u32) -> RelativePeriodicPoint<$f> {
-                RelativePeriodicPoint {
-                    offset: self.offset,
-                    seed: White32(entropy).sample(self.corner),
-                }
-            }
-        }
+impl From<Period> for Frequency {
+    #[inline]
+    fn from(value: Period) -> Self {
+        Self(1.0 / value.0)
+    }
+}
 
-        impl PeriodicPoints<$f> for GridSquare<$u, $f> {
-            #[inline]
-            fn into_relative(self, entropy: u32) -> RelativePeriodicPoint<$f> {
-                RelativePeriodicPoint {
-                    offset: self.offset,
-                    seed: White32(entropy).raw_sample(self.corner),
-                }
-            }
-        }
+impl From<WholePeriod> for Frequency {
+    #[inline]
+    fn from(value: WholePeriod) -> Self {
+        Self::from(Into::<Period>::into(value))
+    }
+}
 
-        impl DirectNoise<$f> for OrthoGrid {
-            type Output = GridSquare<$u, $f>;
+impl From<PowerOf2Period> for Frequency {
+    #[inline]
+    fn from(value: PowerOf2Period) -> Self {
+        Self::from(Into::<Period>::into(value))
+    }
+}
 
-            #[inline]
-            fn raw_sample(&self, input: $f) -> Self::Output {
-                let scaled = input * self.frequency;
-                GridSquare {
-                    least_corner: scaled.$f_to_u(),
-                    offset_from_corner: scaled.fract_gl(),
-                }
-            }
-        }
-    };
+/// Represents a period of this value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WholePeriod(pub u32);
+
+impl From<PowerOf2Period> for WholePeriod {
+    #[inline]
+    fn from(value: PowerOf2Period) -> Self {
+        Self(1u32 << value.0)
+    }
+}
+
+impl Default for WholePeriod {
+    #[inline]
+    fn default() -> Self {
+        Self(2)
+    }
+}
+
+/// Represents a period of 2 ^ of this value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PowerOf2Period(pub u32);
+
+impl Default for PowerOf2Period {
+    #[inline]
+    fn default() -> Self {
+        Self(1)
+    }
 }
