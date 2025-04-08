@@ -22,7 +22,6 @@ macro_rules! impl_white {
             fn raw_sample(&self, input: $dt) -> $dt {
                     (input ^ self.0) // salt with the seed
                     .wrapping_mul($key) // multiply to remove any linear artifacts
-                    .rotate_left(5) // multiplying large numbers like this tends to put more entropy on the more significant bits. This pushes that entropy to the least segnificant.
             }
         }
 
@@ -55,8 +54,13 @@ macro_rules! impl_white {
             #[inline(always)]
             fn raw_sample(&self, input: &[$dt]) -> $dt {
                 let mut val: $dt = $key;
-                for v in input {
-                    val = v.wrapping_mul(val) ^ $key // need xor to make it non-commutative to remove diagonal lines and multiplication to put each dimension on separate orders
+                for &v in input {
+                    // The breaker value must depended on both the `v` and the `val` to prevent it getting stuck.
+                    // We need addition to keep this getting stuck when `v` or `val` are 0.
+                    let breaker = (v ^ val).wrapping_add($key);
+                    // We need the multiplication to put each axis on different orders, and we need xor to make each axis "recoverable" from zero.
+                    // The multiplication can be pipelined with computing the `breaker`. Effectively the cost is just multiplication.
+                    val = v.wrapping_mul(val) ^ breaker;
                 }
                 self.raw_sample(val)
             }
