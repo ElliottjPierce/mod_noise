@@ -1,8 +1,5 @@
 //! This module implements white noise inspiered by the [FxHash](https://crates.io/crates/fxhash)
 
-#[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-
 use bevy_math::{
     U8Vec2, U8Vec3, U8Vec4, U16Vec2, U16Vec3, U16Vec4, U64Vec2, U64Vec3, U64Vec4, UVec2, UVec3,
     UVec4,
@@ -34,17 +31,6 @@ macro_rules! impl_white {
 
             #[inline(always)]
             fn raw_sample(&self, input: [$dt; N]) -> $dt {
-                let slice: &[$dt] = &input;
-                self.raw_sample(slice)
-            }
-        }
-
-        #[cfg(feature = "alloc")]
-        impl DirectNoise< Vec<$dt> > for $name {
-            type Output = $dt;
-
-            #[inline(always)]
-            fn raw_sample(&self, input: Vec<$dt>) -> $dt {
                 let slice: &[$dt] = &input;
                 self.raw_sample(slice)
             }
@@ -191,6 +177,6 @@ mod tests {
         let _tmp = rng.raw_sample(UVec4::new(1, 2, 3, 4));
 
         #[cfg(feature = "alloc")]
-        let _tmp = rng.raw_sample(alloc::vec![1, 2, 3, 4, 5]);
+        let _tmp = rng.raw_sample(alloc::vec![1u32, 2, 3, 4, 5].as_slice());
     }
 }
