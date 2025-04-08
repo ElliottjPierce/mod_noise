@@ -24,13 +24,11 @@ pub trait PeriodicNoise<T>: Noise {
 
 /// Represents a segment of a noise result.
 /// This should be a well defined subset of a domain, for example, a grid square or other polygon in 2d.
-///
-/// `P` defines the type of the domain, for example [`Vec2`] in 2d.
-pub trait PeriodicSegment<P> {
+pub trait PeriodicSegment {
     /// The kind of point that bounds this segment.
-    type Point: PeriodicPoint<P>;
+    type Point: PeriodicPoint;
     /// The kind of [`PeriodicPoints`] that can describe each point that bounds this segment.
-    type Points: PeriodicPoints<P, Point = Self::Point>;
+    type Points: PeriodicPoints<Point = Self::Point>;
 
     /// Gets the primary point associated with this segment.
     /// This is a way to identify a segment by a particular point, for example, the lower left corner of a grid square.
@@ -41,26 +39,24 @@ pub trait PeriodicSegment<P> {
 
 /// This is a bounding point of a [`PeriodicSegment`] which may border multiple segments.
 /// This should be a specific element of a domain, for example, a lattce point or vertex.
-///
-/// `P` defines the type of the domain, for example [`Vec2`] in 2d.
-pub trait PeriodicPoint<P> {
+pub trait PeriodicPoint {
+    /// The type that points to the sampling location from this point.
+    type Relative;
     /// Based on this point and some `entropy`, produces a [`RelativePeriodicPoint`] that represents this point.
-    fn into_relative(self, entropy: u32) -> RelativePeriodicPoint<P>;
+    fn into_relative(self, entropy: u32) -> RelativePeriodicPoint<Self::Relative>;
 }
 
 /// This is a collection of [`PeriodicPoint`]s that bound a [`PeriodicSegment`].
-///
-/// `P` defines the type of the domain, for example [`Vec2`] in 2d.
-pub trait PeriodicPoints<P> {
+pub trait PeriodicPoints {
     /// The kind of point this contains.
-    type Point: PeriodicPoint<P>;
+    type Point: PeriodicPoint;
 
     /// Iterates these points.
     fn iter(&self) -> impl Iterator<Item = Self::Point>;
 }
 
 /// Represents some [`PeriodicPoints`] which can be sampled smoothly to interpolate between those points.
-pub trait PeriodicPointsSampler<P>: PeriodicPoints<P> {
+pub trait PeriodicPointsSampler: PeriodicPoints {
     /// Interpolates between these points, producing some result.
     /// The bounds of `curve` are not checked.
     /// It is up to the caller to verify that they are valid for this domain.
