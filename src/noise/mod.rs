@@ -16,6 +16,12 @@ pub trait NoiseValue: Sized + Clone + 'static {
     fn map_to<T: CorolatedNoiseType<Self>>(self) -> T {
         T::map_from(self)
     }
+
+    /// Passes this noise value through another noise.
+    #[inline]
+    fn and_then<T: DirectNoise<Self>>(self, noise: T) -> T::Output {
+        noise.raw_sample(self)
+    }
 }
 
 /// Signifies that this type can be created from `T`.
@@ -44,6 +50,7 @@ pub trait Noise {
     }
 
     /// Sets the seed of the noise if applicable.
+    #[inline]
     fn with_seed(mut self, seed: &mut SeedGenerator) -> Self
     where
         Self: Sized,
