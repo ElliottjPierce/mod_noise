@@ -1,12 +1,12 @@
 //! Periodic noise for orthogonal grids
 
-use bevy_math::{UVec2, UVec3, UVec4, Vec2, Vec3, Vec3A, Vec4};
+use bevy_math::{IVec2, IVec3, IVec4, UVec2, UVec3, UVec4, Vec2, Vec3, Vec3A, Vec4};
 
 use super::{
     DirectNoise, Noise, NoiseValue,
     periodic::{
-        Frequency, PeriodicNoise, PeriodicPoint, PeriodicPoints, PeriodicSegment, PowerOf2Period,
-        RelativePeriodicPoint, WholePeriod,
+        Frequency, Period, PeriodicNoise, PeriodicPoint, PeriodicPoints, PeriodicSegment,
+        PowerOf2Period, RelativePeriodicPoint, WholePeriod,
     },
     white::White32,
 };
@@ -42,8 +42,8 @@ pub struct OrthoGridLattacePoint<Z, R> {
 }
 
 macro_rules! impl_grid_dimension {
-    ($u:ty, $f:ty, $f_to_u:ident, $u_to_f:ident, with_int) => {
-        impl_grid_dimension!($u, $f, $f_to_u, $u_to_f);
+    ($u:ty, $i:ty, $f:ty, $f_to_u:ident, $u_to_f:ident, with_int) => {
+        impl_grid_dimension!($u, $i, $f, $f_to_u, $u_to_f);
 
         impl DirectNoise<$u> for OrthoGridInteger {
             type Output = GridSquare<$u, $f>;
@@ -77,9 +77,27 @@ macro_rules! impl_grid_dimension {
                 }
             }
         }
+
+        impl DirectNoise<$i> for OrthoGridInteger {
+            type Output = GridSquare<$u, $f>;
+
+            #[inline]
+            fn raw_sample(&self, input: $i) -> Self::Output {
+                input.map_to::<$u>().and_then(self)
+            }
+        }
+
+        impl DirectNoise<$i> for OrthoGridPowerOf2 {
+            type Output = GridSquare<$u, $f>;
+
+            #[inline]
+            fn raw_sample(&self, input: $i) -> Self::Output {
+                input.map_to::<$u>().and_then(self)
+            }
+        }
     };
 
-    ($u:ty, $f:ty, $f_to_u:ident, $u_to_f:ident) => {
+    ($u:ty, $i:ty, $f:ty, $f_to_u:ident, $u_to_f:ident) => {
         impl PeriodicPoint for OrthoGridLattacePoint<$u, $f> {
             type Relative = $f;
 
@@ -143,10 +161,10 @@ impl Noise for OrthoGrid {}
 impl Noise for OrthoGridInteger {}
 impl Noise for OrthoGridPowerOf2 {}
 
-impl_grid_dimension!(UVec2, Vec2, as_uvec2, as_vec2, with_int);
-impl_grid_dimension!(UVec3, Vec3, as_uvec3, as_vec3, with_int);
-impl_grid_dimension!(UVec3, Vec3A, as_uvec3, as_vec3a);
-impl_grid_dimension!(UVec4, Vec4, as_uvec4, as_vec4, with_int);
+impl_grid_dimension!(UVec2, IVec2, Vec2, as_uvec2, as_vec2, with_int);
+impl_grid_dimension!(UVec3, IVec3, Vec3, as_uvec3, as_vec3, with_int);
+impl_grid_dimension!(UVec3, IVec3, Vec3A, as_uvec3, as_vec3a);
+impl_grid_dimension!(UVec4, IVec4, Vec4, as_uvec4, as_vec4, with_int);
 
 impl PeriodicPoints for GridSquare<UVec2, Vec2> {
     type Point = OrthoGridLattacePoint<UVec2, Vec2>;
@@ -237,6 +255,18 @@ impl PeriodicNoise<Frequency> for OrthoGrid {
     #[inline]
     fn set_period(&mut self, period: Frequency) {
         self.0 = period;
+    }
+}
+
+impl PeriodicNoise<Period> for OrthoGrid {
+    #[inline]
+    fn get_period(&self) -> Period {
+        self.0.into()
+    }
+
+    #[inline]
+    fn set_period(&mut self, period: Period) {
+        self.0 = period.into();
     }
 }
 
