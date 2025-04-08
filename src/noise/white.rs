@@ -55,8 +55,11 @@ macro_rules! impl_white {
             #[inline(always)]
             fn raw_sample(&self, input: &[$dt]) -> $dt {
                 let mut val: $dt = $key;
-                for v in input {
-                    val = v.wrapping_mul(val) ^ $key // need xor to make it non-commutative to remove diagonal lines and multiplication to put each dimension on separate orders
+                for &v in input {
+                    // The breaker value must be depended on both the `v` and the `val` to prevent it getting stuck.
+                    let breaker = v.wrapping_mul($key) ^ val.wrapping_mul($key);
+                    // We need the multiplication to put each axis on different orders, and we need addition to make each axis "recoverable" from zero.
+                    val = v.wrapping_mul(val).wrapping_add(breaker);
                 }
                 self.raw_sample(val)
             }
