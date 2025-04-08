@@ -4,9 +4,20 @@ use bevy_math::{UVec2, UVec3, UVec4, Vec2, Vec3, Vec3A, Vec4};
 
 use super::{
     DirectNoise, Noise, NoiseValue,
-    periodic::{Frequency, PeriodicPoint, PeriodicPoints, RelativePeriodicPoint},
+    periodic::{
+        Frequency, PeriodicPoint, PeriodicPoints, PowerOf2Period, RelativePeriodicPoint,
+        WholePeriod,
+    },
     white::White32,
 };
+
+/// A [`PeriodicNoise`] that produces [`GridSquare`] using [`PowerOf2Period`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct OrthoGridPowerOf2(pub PowerOf2Period);
+
+/// A [`PeriodicNoise`] that produces [`GridSquare`] using [`WholePeriod`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct OrthoGridInteger(pub WholePeriod);
 
 /// A [`PeriodicNoise`] that produces [`GridSquare`] using [`Frequency`]
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -31,6 +42,43 @@ pub struct OrthoGridLattacePoint<Z, R> {
 }
 
 macro_rules! impl_grid_dimension {
+    ($u:ty, $f:ty, $f_to_u:ident, $u_to_f:ident, with_int) => {
+        impl_grid_dimension!($u, $f, $f_to_u, $u_to_f);
+
+        impl DirectNoise<$u> for OrthoGridInteger {
+            type Output = GridSquare<$u, $f>;
+
+            #[inline]
+            fn raw_sample(&self, input: $u) -> Self::Output {
+                let least = input / self.0.0;
+                let left = input - least;
+                // x2 + 1 so we are a little off the edges.
+                let offset = (left * 2 + <$u>::ONE).$u_to_f() * <$f>::splat(0.5 / self.0.0 as f32);
+                GridSquare {
+                    least_corner: least,
+                    offset_from_corner: offset,
+                }
+            }
+        }
+
+        impl DirectNoise<$u> for OrthoGridPowerOf2 {
+            type Output = GridSquare<$u, $f>;
+
+            #[inline]
+            fn raw_sample(&self, input: $u) -> Self::Output {
+                let least = input >> self.0.0;
+                let left = input - least;
+                // x2 + 1 so we are a little off the edges.
+                let offset =
+                    (left * 2 + <$u>::ONE).$u_to_f() * <$f>::splat(0.5 / (1 << self.0.0) as f32);
+                GridSquare {
+                    least_corner: least,
+                    offset_from_corner: offset,
+                }
+            }
+        }
+    };
+
     ($u:ty, $f:ty, $f_to_u:ident, $u_to_f:ident) => {
         impl PeriodicPoint<$f> for OrthoGridLattacePoint<$u, $f> {
             #[inline]
@@ -71,11 +119,13 @@ macro_rules! impl_grid_dimension {
 }
 
 impl Noise for OrthoGrid {}
+impl Noise for OrthoGridInteger {}
+impl Noise for OrthoGridPowerOf2 {}
 
-impl_grid_dimension!(UVec2, Vec2, as_uvec2, as_vec2);
-impl_grid_dimension!(UVec3, Vec3, as_uvec3, as_vec3);
+impl_grid_dimension!(UVec2, Vec2, as_uvec2, as_vec2, with_int);
+impl_grid_dimension!(UVec3, Vec3, as_uvec3, as_vec3, with_int);
 impl_grid_dimension!(UVec3, Vec3A, as_uvec3, as_vec3a);
-impl_grid_dimension!(UVec4, Vec4, as_uvec4, as_vec4);
+impl_grid_dimension!(UVec4, Vec4, as_uvec4, as_vec4, with_int);
 
 impl PeriodicPoints<Vec2> for GridSquare<UVec2, Vec2> {
     type Point = OrthoGridLattacePoint<UVec2, Vec2>;

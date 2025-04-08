@@ -82,7 +82,7 @@ pub struct Period(pub f32);
 impl Default for Period {
     #[inline]
     fn default() -> Self {
-        Self(1.0)
+        Self(2.0)
     }
 }
 
@@ -93,6 +93,20 @@ impl From<Frequency> for Period {
     }
 }
 
+impl From<WholePeriod> for Period {
+    #[inline]
+    fn from(value: WholePeriod) -> Self {
+        Self(value.0 as f32)
+    }
+}
+
+impl From<PowerOf2Period> for Period {
+    #[inline]
+    fn from(value: PowerOf2Period) -> Self {
+        Self::from(Into::<WholePeriod>::into(value))
+    }
+}
+
 /// Represents a frequency of this value.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Frequency(pub f32);
@@ -100,7 +114,7 @@ pub struct Frequency(pub f32);
 impl Default for Frequency {
     #[inline]
     fn default() -> Self {
-        Self(1.0)
+        Self(0.5)
     }
 }
 
@@ -108,5 +122,48 @@ impl From<Period> for Frequency {
     #[inline]
     fn from(value: Period) -> Self {
         Self(1.0 / value.0)
+    }
+}
+
+impl From<WholePeriod> for Frequency {
+    #[inline]
+    fn from(value: WholePeriod) -> Self {
+        Self::from(Into::<Period>::into(value))
+    }
+}
+
+impl From<PowerOf2Period> for Frequency {
+    #[inline]
+    fn from(value: PowerOf2Period) -> Self {
+        Self::from(Into::<Period>::into(value))
+    }
+}
+
+/// Represents a period of this value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WholePeriod(pub u32);
+
+impl From<PowerOf2Period> for WholePeriod {
+    #[inline]
+    fn from(value: PowerOf2Period) -> Self {
+        Self(1u32 << value.0)
+    }
+}
+
+impl Default for WholePeriod {
+    #[inline]
+    fn default() -> Self {
+        Self(2)
+    }
+}
+
+/// Represents a period of 2 ^ of this value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PowerOf2Period(pub u32);
+
+impl Default for PowerOf2Period {
+    #[inline]
+    fn default() -> Self {
+        Self(1)
     }
 }
