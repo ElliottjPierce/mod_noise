@@ -8,7 +8,7 @@ use bevy::{
 use mod_noise::noise::{
     PeriodicNoise,
     adapters::Adapter,
-    cellular::{CellNoise, CellularNoise},
+    cellular::CellularNoise,
     grid::OrthoGrid,
     norm::UNorm,
     periodic::{Frequency, Period},
@@ -58,15 +58,9 @@ fn main() -> AppExit {
             |mut commands: Commands, mut images: ResMut<Assets<Image>>| {
                 let mut noise = NoiseOptions {
                     options: vec![NoiseOption {
-                        frequency: Period(32.0).into(),
-                        seed: 0,
-                        noise: Box::new(CellularNoise {
-                            periodic: OrthoGrid::default(),
-                            cell_noise: CellNoise {
-                                noise: Adapter::<UNorm>::default(),
-                                seed: 0,
-                            },
-                        }),
+                        frequency: Period(0.5).into(),
+                        seed: 92093765906047548,
+                        noise: Box::new(CellularNoise::<OrthoGrid, Adapter<UNorm>>::default()),
                     }],
                     selected: 0,
                     image: Handle::weak_from_u128(0),

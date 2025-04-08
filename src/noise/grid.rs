@@ -42,8 +42,8 @@ pub struct OrthoGridLattacePoint<Z, R> {
 }
 
 macro_rules! impl_grid_dimension {
-    ($u:ty, $i:ty, $f:ty, $f_to_u:ident, $u_to_f:ident, with_int) => {
-        impl_grid_dimension!($u, $i, $f, $f_to_u, $u_to_f);
+    ($u:ty, $i:ty, $f:ty, $f_to_i:ident, $u_to_f:ident, with_int) => {
+        impl_grid_dimension!($u, $i, $f, $f_to_i, $u_to_f);
 
         impl DirectNoise<$u> for OrthoGridInteger {
             type Output = GridSquare<$u, $f>;
@@ -97,7 +97,7 @@ macro_rules! impl_grid_dimension {
         }
     };
 
-    ($u:ty, $i:ty, $f:ty, $f_to_u:ident, $u_to_f:ident) => {
+    ($u:ty, $i:ty, $f:ty, $f_to_i:ident, $u_to_f:ident) => {
         impl PeriodicPoint for OrthoGridLattacePoint<$u, $f> {
             type Relative = $f;
 
@@ -149,7 +149,7 @@ macro_rules! impl_grid_dimension {
             fn raw_sample(&self, input: $f) -> Self::Output {
                 let scaled = input * self.0.0;
                 GridSquare {
-                    least_corner: scaled.$f_to_u(),
+                    least_corner: scaled.$f_to_i().map_to::<$u>(),
                     offset_from_corner: scaled.fract_gl(),
                 }
             }
@@ -161,10 +161,10 @@ impl Noise for OrthoGrid {}
 impl Noise for OrthoGridInteger {}
 impl Noise for OrthoGridPowerOf2 {}
 
-impl_grid_dimension!(UVec2, IVec2, Vec2, as_uvec2, as_vec2, with_int);
-impl_grid_dimension!(UVec3, IVec3, Vec3, as_uvec3, as_vec3, with_int);
-impl_grid_dimension!(UVec3, IVec3, Vec3A, as_uvec3, as_vec3a);
-impl_grid_dimension!(UVec4, IVec4, Vec4, as_uvec4, as_vec4, with_int);
+impl_grid_dimension!(UVec2, IVec2, Vec2, as_ivec2, as_vec2, with_int);
+impl_grid_dimension!(UVec3, IVec3, Vec3, as_ivec3, as_vec3, with_int);
+impl_grid_dimension!(UVec3, IVec3, Vec3A, as_ivec3, as_vec3a);
+impl_grid_dimension!(UVec4, IVec4, Vec4, as_ivec4, as_vec4, with_int);
 
 impl PeriodicPoints for GridSquare<UVec2, Vec2> {
     type Point = OrthoGridLattacePoint<UVec2, Vec2>;
