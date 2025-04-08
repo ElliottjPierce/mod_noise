@@ -5,7 +5,7 @@ use bevy_math::{
     UVec4,
 };
 
-use super::DirectNoise;
+use super::{DirectNoise, Noise};
 
 /// This creates a white noise implementation
 macro_rules! impl_white {
@@ -116,6 +116,60 @@ impl_white!(u128, White128, 982_451_653_011,);
 impl_white!(usize, WhiteUsize, 104_395_303,);
 #[cfg(target_pointer_width = "64")]
 impl_white!(usize, WhiteUsize, 982_451_653,);
+
+#[cfg(target_pointer_width = "32")]
+impl Noise for WhiteUsize {
+    #[inline]
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        self.0 = seed.next_seed() as usize;
+    }
+}
+
+#[cfg(target_pointer_width = "64")]
+impl Noise for WhiteUsize {
+    #[inline]
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        self.0 = White64(0).with_seed(seed).0 as usize;
+    }
+}
+
+impl Noise for White8 {
+    #[inline]
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        self.0 = seed.next_seed() as u8;
+    }
+}
+
+impl Noise for White16 {
+    #[inline]
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        self.0 = seed.next_seed() as u16;
+    }
+}
+
+impl Noise for White32 {
+    #[inline]
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        self.0 = seed.next_seed();
+    }
+}
+
+impl Noise for White64 {
+    #[inline]
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        self.0 = seed.next_seed() as u64 | ((seed.next_seed() as u64) << 32);
+    }
+}
+
+impl Noise for White128 {
+    #[inline]
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        self.0 = seed.next_seed() as u128
+            | ((seed.next_seed() as u128) << 32)
+            | ((seed.next_seed() as u128) << 64)
+            | ((seed.next_seed() as u128) << 96);
+    }
+}
 
 /// A light weight seed generator.
 /// This is a stripped down version of an Rng.

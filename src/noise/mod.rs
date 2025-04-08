@@ -1,5 +1,7 @@
 //! Contains various noise functions
 
+use white::SeedGenerator;
+
 pub mod common_mapping;
 pub mod norm;
 pub mod periodic;
@@ -21,22 +23,41 @@ pub trait CorolatedNoiseType<T>: NoiseValue {
     fn map_from(value: T) -> Self;
 }
 
-/// Represents a noise function that samples at a point of type `I` and returns a result of type
-/// `O`.
-pub trait DirectNoise<I> {
+/// Represents some noise function.
+pub trait Noise {
+    /// Samples the noise.
+    ///
+    /// This is separate from [`raw_sample`](Noise::raw_sample) for future proofing.
+    #[inline]
+    fn sample<I>(&self, input: I) -> Self::Output
+    where
+        Self: DirectNoise<I>,
+    {
+        self.raw_sample(input)
+    }
+
+    /// Sets the seed of the noise if applicable.
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        _ = seed;
+    }
+
+    /// Sets the seed of the noise if applicable.
+    fn with_seed(mut self, seed: &mut SeedGenerator) -> Self
+    where
+        Self: Sized,
+    {
+        self.set_seed(seed);
+        self
+    }
+}
+
+/// Represents a noise function that samples at a point of type `I` and returns a result.
+pub trait DirectNoise<I>: Noise {
     /// The result of the noise.
     type Output: NoiseValue;
 
     /// Samples the noise function at this `input`.
     fn raw_sample(&self, input: I) -> Self::Output;
-
-    /// Samples the noise.
-    ///
-    /// This is separate from [`raw_sample`](Noise::raw_sample) for future proofing.
-    #[inline]
-    fn sample(&self, input: I) -> Self::Output {
-        self.raw_sample(input)
-    }
 }
 
 /// Represents a differentiable [`Noise`].
@@ -120,6 +141,8 @@ mod tests {
     use super::*;
 
     struct NopNoise;
+
+    impl Noise for NopNoise {}
 
     impl DirectNoise<f32> for NopNoise {
         type Output = f32;
