@@ -2,6 +2,7 @@
 
 use white::SeedGenerator;
 
+pub mod cellular;
 pub mod common_mapping;
 pub mod grid;
 pub mod norm;
