@@ -6,14 +6,16 @@ use bevy::{
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
 use mod_noise::noise::{
-    DirectNoise, NoiseExt, NoiseValue,
+    DirectNoise,
+    adapters::Adapter,
     cellular::{CellNoise, CellularNoise},
     grid::OrthoGrid,
     norm::UNorm,
-    periodic::{Frequency, Period},
-    white::White32,
+    periodic::{Frequency, Period, PeriodicNoise},
+    white::SeedGenerator,
 };
 
+/// Holds a version of the noise
 pub struct NoiseOption {
     frequency: Frequency,
     seed: u64,
@@ -21,6 +23,7 @@ pub struct NoiseOption {
 }
 
 impl NoiseOption {
+    /// Displays the noise on the image.
     pub fn display_image(&self, image: &mut Image) {
         let width = image.width();
         let height = image.height();
@@ -39,6 +42,7 @@ impl NoiseOption {
     }
 }
 
+/// Holds the current noise
 #[derive(Resource)]
 pub struct NoiseOptions {
     options: Vec<NoiseOption>,
@@ -52,7 +56,7 @@ fn main() -> AppExit {
         .add_systems(
             Startup,
             |mut commands: Commands, mut images: ResMut<Assets<Image>>| {
-                let mut image = Image::new_fill(
+                let image = Image::new_fill(
                     Extent3d {
                         width: 1920,
                         height: 1080,
@@ -66,7 +70,7 @@ fn main() -> AppExit {
                 let handle = images.add(image);
                 commands.spawn((
                     ImageNode {
-                        image: handle,
+                        image: handle.clone(),
                         ..Default::default()
                     },
                     Node {
@@ -83,7 +87,7 @@ fn main() -> AppExit {
                         noise: Box::new(CellularNoise {
                             periodic: OrthoGrid::default(),
                             cell_noise: CellNoise {
-                                noise: todo!(),
+                                noise: Adapter::<UNorm>::default(),
                                 seed: 0,
                             },
                         }),
@@ -93,5 +97,52 @@ fn main() -> AppExit {
                 });
             },
         )
+        .add_systems(Update, update_system)
         .run()
+}
+
+fn update_system(
+    mut noise: ResMut<NoiseOptions>,
+    mut images: ResMut<Assets<Image>>,
+    input: Res<ButtonInput<KeyCode>>,
+) {
+    let mut changed = false;
+
+    if input.just_pressed(KeyCode::ArrowRight) {
+        noise.selected = (noise.selected.wrapping_add(1)) % noise.options.len();
+        changed = true;
+    }
+    if input.just_pressed(KeyCode::ArrowLeft) {
+        noise.selected = (noise.selected.wrapping_sub(1)) % noise.options.len();
+        changed = true;
+    }
+
+    let image = noise.image.id();
+    let selected = noise.selected;
+    let current = &mut noise.options[selected];
+
+    if input.just_pressed(KeyCode::KeyW) {
+        current.seed = current.seed.wrapping_add(1);
+        changed = true;
+    }
+    if input.just_pressed(KeyCode::KeyS) {
+        current.seed = current.seed.wrapping_sub(1);
+        changed = true;
+    }
+
+    if input.just_pressed(KeyCode::KeyD) {
+        current.frequency.0 *= 2.0;
+        changed = true;
+    }
+    if input.just_pressed(KeyCode::KeyA) {
+        current.frequency.0 *= 0.5;
+        changed = true;
+    }
+
+    if changed {
+        current
+            .noise
+            .set_seed(&mut SeedGenerator::new_from_u64(current.seed));
+        current.display_image(images.get_mut(image).unwrap());
+    }
 }

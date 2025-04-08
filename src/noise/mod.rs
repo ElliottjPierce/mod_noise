@@ -3,6 +3,7 @@
 use periodic::PeriodicNoise;
 use white::SeedGenerator;
 
+pub mod adapters;
 pub mod cellular;
 pub mod common_mapping;
 pub mod grid;
@@ -11,7 +12,7 @@ pub mod periodic;
 pub mod white;
 
 /// Marks the type as the value inolved in noise.
-pub trait NoiseValue: Sized + Clone + 'static {
+pub trait NoiseValue: Send + Sync + Sized + Clone + 'static {
     /// Maps this [`NoiseValue`] to `T`.
     #[inline]
     fn map_to<T: CorolatedNoiseType<Self>>(self) -> T {
