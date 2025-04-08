@@ -154,6 +154,15 @@ macro_rules! impl_grid_dimension {
                 }
             }
         }
+
+        impl PeriodicPoints for GridSquare<$u, $f> {
+            type Point = OrthoGridLattacePoint<$u, $f>;
+
+            #[inline]
+            fn iter(&self) -> impl Iterator<Item = Self::Point> {
+                self.corners().into_iter()
+            }
+        }
     };
 }
 
@@ -166,26 +175,21 @@ impl_grid_dimension!(UVec3, IVec3, Vec3, as_ivec3, as_vec3, with_int);
 impl_grid_dimension!(UVec3, IVec3, Vec3A, as_ivec3, as_vec3a);
 impl_grid_dimension!(UVec4, IVec4, Vec4, as_ivec4, as_vec4, with_int);
 
-impl PeriodicPoints for GridSquare<UVec2, Vec2> {
-    type Point = OrthoGridLattacePoint<UVec2, Vec2>;
-
+impl GridSquare<UVec2, Vec2> {
     #[inline]
-    fn iter(&self) -> impl Iterator<Item = Self::Point> {
+    fn corners(&self) -> [OrthoGridLattacePoint<UVec2, Vec2>; 4] {
         [
             self.from_offset(UVec2::new(0, 0)),
             self.from_offset(UVec2::new(0, 1)),
             self.from_offset(UVec2::new(1, 0)),
             self.from_offset(UVec2::new(1, 1)),
         ]
-        .into_iter()
     }
 }
 
-impl PeriodicPoints for GridSquare<UVec3, Vec3> {
-    type Point = OrthoGridLattacePoint<UVec3, Vec3>;
-
+impl GridSquare<UVec3, Vec3> {
     #[inline]
-    fn iter(&self) -> impl Iterator<Item = Self::Point> {
+    fn corners(&self) -> [OrthoGridLattacePoint<UVec3, Vec3>; 8] {
         [
             self.from_offset(UVec3::new(0, 0, 0)),
             self.from_offset(UVec3::new(0, 0, 1)),
@@ -196,15 +200,12 @@ impl PeriodicPoints for GridSquare<UVec3, Vec3> {
             self.from_offset(UVec3::new(1, 1, 0)),
             self.from_offset(UVec3::new(1, 1, 1)),
         ]
-        .into_iter()
     }
 }
 
-impl PeriodicPoints for GridSquare<UVec3, Vec3A> {
-    type Point = OrthoGridLattacePoint<UVec3, Vec3A>;
-
+impl GridSquare<UVec3, Vec3A> {
     #[inline]
-    fn iter(&self) -> impl Iterator<Item = Self::Point> {
+    fn corners(&self) -> [OrthoGridLattacePoint<UVec3, Vec3A>; 8] {
         [
             self.from_offset(UVec3::new(0, 0, 0)),
             self.from_offset(UVec3::new(0, 0, 1)),
@@ -215,15 +216,12 @@ impl PeriodicPoints for GridSquare<UVec3, Vec3A> {
             self.from_offset(UVec3::new(1, 1, 0)),
             self.from_offset(UVec3::new(1, 1, 1)),
         ]
-        .into_iter()
     }
 }
 
-impl PeriodicPoints for GridSquare<UVec4, Vec4> {
-    type Point = OrthoGridLattacePoint<UVec4, Vec4>;
-
+impl GridSquare<UVec4, Vec4> {
     #[inline]
-    fn iter(&self) -> impl Iterator<Item = Self::Point> {
+    fn corners(&self) -> [OrthoGridLattacePoint<UVec4, Vec4>; 16] {
         [
             self.from_offset(UVec4::new(0, 0, 0, 0)),
             self.from_offset(UVec4::new(0, 0, 0, 1)),
@@ -242,7 +240,6 @@ impl PeriodicPoints for GridSquare<UVec4, Vec4> {
             self.from_offset(UVec4::new(1, 1, 1, 0)),
             self.from_offset(UVec4::new(1, 1, 1, 1)),
         ]
-        .into_iter()
     }
 }
 
