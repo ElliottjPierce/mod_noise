@@ -5,7 +5,7 @@ use bevy_math::{
     UVec4,
 };
 
-use super::{DirectNoise, Noise};
+use super::{DirectNoise, Noise, NoiseExt};
 
 /// This creates a white noise implementation
 macro_rules! impl_white {

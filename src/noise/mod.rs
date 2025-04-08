@@ -1,7 +1,9 @@
 //! Contains various noise functions
 
+use periodic::ScalableNoise;
 use white::SeedGenerator;
 
+pub mod adapters;
 pub mod cellular;
 pub mod common_mapping;
 pub mod grid;
@@ -10,11 +12,17 @@ pub mod periodic;
 pub mod white;
 
 /// Marks the type as the value inolved in noise.
-pub trait NoiseValue: Sized + Clone + 'static {
+pub trait NoiseValue: Send + Sync + Sized + Clone + 'static {
     /// Maps this [`NoiseValue`] to `T`.
     #[inline]
     fn map_to<T: CorolatedNoiseType<Self>>(self) -> T {
         T::map_from(self)
+    }
+
+    /// Passes this noise value through another noise.
+    #[inline]
+    fn and_then<T: DirectNoise<Self>>(self, noise: &T) -> T::Output {
+        noise.raw_sample(self)
     }
 }
 
@@ -26,7 +34,15 @@ pub trait CorolatedNoiseType<T>: NoiseValue {
 }
 
 /// Represents some noise function.
-pub trait Noise {
+pub trait Noise: Send + Sync {
+    /// Sets the seed of the noise if applicable.
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        _ = seed;
+    }
+}
+
+/// Additional items for [`Noise`] that are separate to keep [`Noise`] object safe.
+pub trait NoiseExt: Noise {
     /// Samples the noise.
     ///
     /// This is separate from [`raw_sample`](Noise::raw_sample) for future proofing.
@@ -39,11 +55,7 @@ pub trait Noise {
     }
 
     /// Sets the seed of the noise if applicable.
-    fn set_seed(&mut self, seed: &mut SeedGenerator) {
-        _ = seed;
-    }
-
-    /// Sets the seed of the noise if applicable.
+    #[inline]
     fn with_seed(mut self, seed: &mut SeedGenerator) -> Self
     where
         Self: Sized,
@@ -51,7 +63,20 @@ pub trait Noise {
         self.set_seed(seed);
         self
     }
+
+    /// Sets the [`Period`](ScalableNoise::Period) of the noise.
+    #[inline]
+    fn with_period<T>(mut self, period: T) -> Self
+    where
+        Self: Sized + ScalableNoise<T>,
+    {
+        self.set_scale(period);
+        self
+    }
 }
+
+/// Represents a noise on type `I` scalable by type `P`.
+pub trait PeriodicNoise<I, P>: DirectNoise<I> + ScalableNoise<P> {}
 
 /// Represents a noise function that samples at a point of type `I` and returns a result.
 pub trait DirectNoise<I>: Noise {
@@ -87,6 +112,10 @@ impl<I: Copy + core::ops::AddAssign, T: DirectNoise<I, Output = I>> WarpingNoise
         *input += self.raw_sample(*input);
     }
 }
+
+impl<I, P, T: DirectNoise<I> + ScalableNoise<P>> PeriodicNoise<I, P> for T {}
+
+impl<T: Noise> NoiseExt for T {}
 
 macro_rules! impl_noise_value {
     ($($name:ty),*,) => {

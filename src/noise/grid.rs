@@ -1,26 +1,26 @@
 //! Periodic noise for orthogonal grids
 
-use bevy_math::{UVec2, UVec3, UVec4, Vec2, Vec3, Vec3A, Vec4};
+use bevy_math::{IVec2, IVec3, IVec4, UVec2, UVec3, UVec4, Vec2, Vec3, Vec3A, Vec4};
 
 use super::{
     DirectNoise, Noise, NoiseValue,
     periodic::{
-        Frequency, PeriodicNoise, PeriodicPoint, PeriodicPoints, PeriodicSegment, PowerOf2Period,
-        RelativePeriodicPoint, WholePeriod,
+        Frequency, Period, PeriodicPoint, PeriodicPoints, PeriodicSegment, PowerOf2Period,
+        RelativePeriodicPoint, ScalableNoise, WholePeriod,
     },
     white::White32,
 };
 
-/// A [`PeriodicNoise`] that produces [`GridSquare`] using [`PowerOf2Period`].
-#[derive(Debug, Clone, Copy, PartialEq)]
+/// A [`ScalableNoise`] that produces [`GridSquare`] using [`PowerOf2Period`].
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct OrthoGridPowerOf2(pub PowerOf2Period);
 
-/// A [`PeriodicNoise`] that produces [`GridSquare`] using [`WholePeriod`].
-#[derive(Debug, Clone, Copy, PartialEq)]
+/// A [`ScalableNoise`] that produces [`GridSquare`] using [`WholePeriod`].
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct OrthoGridInteger(pub WholePeriod);
 
-/// A [`PeriodicNoise`] that produces [`GridSquare`] using [`Frequency`]
-#[derive(Debug, Clone, Copy, PartialEq)]
+/// A [`ScalableNoise`] that produces [`GridSquare`] using [`Frequency`]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct OrthoGrid(pub Frequency);
 
 /// Represents a grid square.
@@ -42,8 +42,8 @@ pub struct OrthoGridLattacePoint<Z, R> {
 }
 
 macro_rules! impl_grid_dimension {
-    ($u:ty, $f:ty, $f_to_u:ident, $u_to_f:ident, with_int) => {
-        impl_grid_dimension!($u, $f, $f_to_u, $u_to_f);
+    ($u:ty, $i:ty, $f:ty, $f_to_i:ident, $u_to_f:ident, with_int) => {
+        impl_grid_dimension!($u, $i, $f, $f_to_i, $u_to_f);
 
         impl DirectNoise<$u> for OrthoGridInteger {
             type Output = GridSquare<$u, $f>;
@@ -77,9 +77,27 @@ macro_rules! impl_grid_dimension {
                 }
             }
         }
+
+        impl DirectNoise<$i> for OrthoGridInteger {
+            type Output = GridSquare<$u, $f>;
+
+            #[inline]
+            fn raw_sample(&self, input: $i) -> Self::Output {
+                input.map_to::<$u>().and_then(self)
+            }
+        }
+
+        impl DirectNoise<$i> for OrthoGridPowerOf2 {
+            type Output = GridSquare<$u, $f>;
+
+            #[inline]
+            fn raw_sample(&self, input: $i) -> Self::Output {
+                input.map_to::<$u>().and_then(self)
+            }
+        }
     };
 
-    ($u:ty, $f:ty, $f_to_u:ident, $u_to_f:ident) => {
+    ($u:ty, $i:ty, $f:ty, $f_to_i:ident, $u_to_f:ident) => {
         impl PeriodicPoint for OrthoGridLattacePoint<$u, $f> {
             type Relative = $f;
 
@@ -87,7 +105,7 @@ macro_rules! impl_grid_dimension {
             fn into_relative(self, entropy: u32) -> RelativePeriodicPoint<$f> {
                 RelativePeriodicPoint {
                     offset: self.offset,
-                    seed: White32(entropy).sample(self.corner),
+                    seed: White32(entropy).raw_sample(self.corner),
                 }
             }
         }
@@ -131,7 +149,7 @@ macro_rules! impl_grid_dimension {
             fn raw_sample(&self, input: $f) -> Self::Output {
                 let scaled = input * self.0.0;
                 GridSquare {
-                    least_corner: scaled.$f_to_u(),
+                    least_corner: scaled.$f_to_i().map_to::<$u>(),
                     offset_from_corner: scaled.fract_gl(),
                 }
             }
@@ -143,10 +161,10 @@ impl Noise for OrthoGrid {}
 impl Noise for OrthoGridInteger {}
 impl Noise for OrthoGridPowerOf2 {}
 
-impl_grid_dimension!(UVec2, Vec2, as_uvec2, as_vec2, with_int);
-impl_grid_dimension!(UVec3, Vec3, as_uvec3, as_vec3, with_int);
-impl_grid_dimension!(UVec3, Vec3A, as_uvec3, as_vec3a);
-impl_grid_dimension!(UVec4, Vec4, as_uvec4, as_vec4, with_int);
+impl_grid_dimension!(UVec2, IVec2, Vec2, as_ivec2, as_vec2, with_int);
+impl_grid_dimension!(UVec3, IVec3, Vec3, as_ivec3, as_vec3, with_int);
+impl_grid_dimension!(UVec3, IVec3, Vec3A, as_ivec3, as_vec3a);
+impl_grid_dimension!(UVec4, IVec4, Vec4, as_ivec4, as_vec4, with_int);
 
 impl PeriodicPoints for GridSquare<UVec2, Vec2> {
     type Point = OrthoGridLattacePoint<UVec2, Vec2>;
@@ -228,38 +246,50 @@ impl PeriodicPoints for GridSquare<UVec4, Vec4> {
     }
 }
 
-impl PeriodicNoise<Frequency> for OrthoGrid {
+impl ScalableNoise<Frequency> for OrthoGrid {
     #[inline]
-    fn get_period(&self) -> Frequency {
+    fn get_scale(&self) -> Frequency {
         self.0
     }
 
     #[inline]
-    fn set_period(&mut self, period: Frequency) {
+    fn set_scale(&mut self, period: Frequency) {
         self.0 = period;
     }
 }
 
-impl PeriodicNoise<WholePeriod> for OrthoGridInteger {
+impl ScalableNoise<Period> for OrthoGrid {
     #[inline]
-    fn get_period(&self) -> WholePeriod {
+    fn get_scale(&self) -> Period {
+        self.0.into()
+    }
+
+    #[inline]
+    fn set_scale(&mut self, period: Period) {
+        self.0 = period.into();
+    }
+}
+
+impl ScalableNoise<WholePeriod> for OrthoGridInteger {
+    #[inline]
+    fn get_scale(&self) -> WholePeriod {
         self.0
     }
 
     #[inline]
-    fn set_period(&mut self, period: WholePeriod) {
+    fn set_scale(&mut self, period: WholePeriod) {
         self.0 = period;
     }
 }
 
-impl PeriodicNoise<PowerOf2Period> for OrthoGridPowerOf2 {
+impl ScalableNoise<PowerOf2Period> for OrthoGridPowerOf2 {
     #[inline]
-    fn get_period(&self) -> PowerOf2Period {
+    fn get_scale(&self) -> PowerOf2Period {
         self.0
     }
 
     #[inline]
-    fn set_period(&mut self, period: PowerOf2Period) {
+    fn set_scale(&mut self, period: PowerOf2Period) {
         self.0 = period;
     }
 }

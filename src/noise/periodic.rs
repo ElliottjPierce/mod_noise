@@ -5,21 +5,11 @@ use bevy_math::{Curve, curve::Ease};
 use super::Noise;
 
 /// Represents a [`Noise`] that divides its domain into [`PeriodicSegment`] according to some period `T`.
-pub trait PeriodicNoise<T>: Noise {
-    /// Gets the [`Period`](PeriodicNoise::Period) of the noise.
-    fn get_period(&self) -> T;
-    /// Sets the [`Period`](PeriodicNoise::Period) of the noise.
-    fn set_period(&mut self, period: T);
-
-    /// Sets the [`Period`](PeriodicNoise::Period) of the noise.
-    #[inline]
-    fn with_period(mut self, period: T) -> Self
-    where
-        Self: Sized,
-    {
-        self.set_period(period);
-        self
-    }
+pub trait ScalableNoise<T>: Noise {
+    /// Gets the scale of the noise.
+    fn get_scale(&self) -> T;
+    /// Sets the scale of the noise.
+    fn set_scale(&mut self, period: T);
 }
 
 /// Represents a segment of a noise result.
@@ -161,17 +151,5 @@ impl Default for PowerOf2Period {
     #[inline]
     fn default() -> Self {
         Self(1)
-    }
-}
-
-impl<T: PeriodicNoise<Frequency>> PeriodicNoise<Period> for T {
-    #[inline]
-    fn get_period(&self) -> Period {
-        PeriodicNoise::<Frequency>::get_period(self).into()
-    }
-
-    #[inline]
-    fn set_period(&mut self, period: Period) {
-        PeriodicNoise::<Frequency>::set_period(self, period.into());
     }
 }
