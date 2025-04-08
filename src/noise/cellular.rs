@@ -2,7 +2,7 @@
 
 use super::{
     DirectNoise, Noise, NoiseValue,
-    periodic::{PeriodicNoise, PeriodicPoint, PeriodicSegment},
+    periodic::{PeriodicPoint, PeriodicSegment, ScalableNoise},
     white::SeedGenerator,
 };
 
@@ -34,7 +34,7 @@ impl<T: PeriodicSegment, N: DirectNoise<u32>> DirectNoise<T> for CellNoise<N> {
     }
 }
 
-/// Represents cellular noise over some for some [`PeriodicNoise`] `P` and some [`DirectNoise`] `N` that acts on it.
+/// Represents cellular noise over some for some [`ScalableNoise`] `P` and some [`DirectNoise`] `N` that acts on it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct CellularNoise<P, N> {
     /// The noise for making the cells.
@@ -62,14 +62,14 @@ impl<I, P: DirectNoise<I, Output: PeriodicSegment>, N: DirectNoise<u32>> DirectN
     }
 }
 
-impl<T, P: PeriodicNoise<T>, N: Noise> PeriodicNoise<T> for CellularNoise<P, N> {
+impl<T, P: ScalableNoise<T>, N: Noise> ScalableNoise<T> for CellularNoise<P, N> {
     #[inline]
-    fn get_period(&self) -> T {
-        self.periodic.get_period()
+    fn get_scale(&self) -> T {
+        self.periodic.get_scale()
     }
 
     #[inline]
-    fn set_period(&mut self, period: T) {
-        self.periodic.set_period(period);
+    fn set_scale(&mut self, period: T) {
+        self.periodic.set_scale(period);
     }
 }

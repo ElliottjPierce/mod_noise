@@ -1,6 +1,6 @@
 //! Contains various noise functions
 
-use periodic::PeriodicNoise;
+use periodic::ScalableNoise;
 use white::SeedGenerator;
 
 pub mod adapters;
@@ -64,16 +64,19 @@ pub trait NoiseExt: Noise {
         self
     }
 
-    /// Sets the [`Period`](PeriodicNoise::Period) of the noise.
+    /// Sets the [`Period`](ScalableNoise::Period) of the noise.
     #[inline]
     fn with_period<T>(mut self, period: T) -> Self
     where
-        Self: Sized + PeriodicNoise<T>,
+        Self: Sized + ScalableNoise<T>,
     {
-        self.set_period(period);
+        self.set_scale(period);
         self
     }
 }
+
+/// Represents a noise on type `I` scalable by type `P`.
+pub trait PeriodicNoise<I, P>: DirectNoise<I> + ScalableNoise<P> {}
 
 /// Represents a noise function that samples at a point of type `I` and returns a result.
 pub trait DirectNoise<I>: Noise {
@@ -109,6 +112,8 @@ impl<I: Copy + core::ops::AddAssign, T: DirectNoise<I, Output = I>> WarpingNoise
         *input += self.raw_sample(*input);
     }
 }
+
+impl<I, P, T: DirectNoise<I> + ScalableNoise<P>> PeriodicNoise<I, P> for T {}
 
 impl<T: Noise> NoiseExt for T {}
 

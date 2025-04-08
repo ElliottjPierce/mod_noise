@@ -6,12 +6,12 @@ use bevy::{
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
 use mod_noise::noise::{
-    DirectNoise,
+    PeriodicNoise,
     adapters::Adapter,
     cellular::{CellNoise, CellularNoise},
     grid::OrthoGrid,
     norm::UNorm,
-    periodic::{Frequency, Period, PeriodicNoise},
+    periodic::{Frequency, Period},
     white::SeedGenerator,
 };
 
@@ -19,7 +19,7 @@ use mod_noise::noise::{
 pub struct NoiseOption {
     frequency: Frequency,
     seed: u64,
-    noise: Box<dyn DirectNoise<Vec2, Output = UNorm>>,
+    noise: Box<dyn PeriodicNoise<Vec2, Frequency, Output = UNorm>>,
 }
 
 impl NoiseOption {
@@ -56,31 +56,7 @@ fn main() -> AppExit {
         .add_systems(
             Startup,
             |mut commands: Commands, mut images: ResMut<Assets<Image>>| {
-                let image = Image::new_fill(
-                    Extent3d {
-                        width: 1920,
-                        height: 1080,
-                        depth_or_array_layers: 1,
-                    },
-                    TextureDimension::D2,
-                    &[255, 255, 255, 255, 255, 255, 255, 255],
-                    TextureFormat::Rgba16Unorm,
-                    RenderAssetUsages::all(),
-                );
-                let handle = images.add(image);
-                commands.spawn((
-                    ImageNode {
-                        image: handle.clone(),
-                        ..Default::default()
-                    },
-                    Node {
-                        width: Val::Percent(100.0),
-                        height: Val::Percent(100.0),
-                        ..Default::default()
-                    },
-                ));
-                commands.spawn(Camera2d);
-                commands.insert_resource(NoiseOptions {
+                let mut noise = NoiseOptions {
                     options: vec![NoiseOption {
                         frequency: Period(32.0).into(),
                         seed: 0,
@@ -93,8 +69,35 @@ fn main() -> AppExit {
                         }),
                     }],
                     selected: 0,
-                    image: handle,
-                });
+                    image: Handle::weak_from_u128(0),
+                };
+                let mut image = Image::new_fill(
+                    Extent3d {
+                        width: 1920,
+                        height: 1080,
+                        depth_or_array_layers: 1,
+                    },
+                    TextureDimension::D2,
+                    &[255, 255, 255, 255, 255, 255, 255, 255],
+                    TextureFormat::Rgba16Unorm,
+                    RenderAssetUsages::all(),
+                );
+                noise.options[noise.selected].display_image(&mut image);
+                let handle = images.add(image);
+                noise.image = handle.clone();
+                commands.spawn((
+                    ImageNode {
+                        image: handle,
+                        ..Default::default()
+                    },
+                    Node {
+                        width: Val::Percent(100.0),
+                        height: Val::Percent(100.0),
+                        ..Default::default()
+                    },
+                ));
+                commands.spawn(Camera2d);
+                commands.insert_resource(noise);
             },
         )
         .add_systems(Update, update_system)
@@ -143,6 +146,7 @@ fn update_system(
         current
             .noise
             .set_seed(&mut SeedGenerator::new_from_u64(current.seed));
+        current.noise.set_scale(current.frequency);
         current.display_image(images.get_mut(image).unwrap());
     }
 }

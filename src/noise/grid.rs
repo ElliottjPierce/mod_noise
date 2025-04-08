@@ -5,21 +5,21 @@ use bevy_math::{IVec2, IVec3, IVec4, UVec2, UVec3, UVec4, Vec2, Vec3, Vec3A, Vec
 use super::{
     DirectNoise, Noise, NoiseValue,
     periodic::{
-        Frequency, Period, PeriodicNoise, PeriodicPoint, PeriodicPoints, PeriodicSegment,
-        PowerOf2Period, RelativePeriodicPoint, WholePeriod,
+        Frequency, Period, PeriodicPoint, PeriodicPoints, PeriodicSegment, PowerOf2Period,
+        RelativePeriodicPoint, ScalableNoise, WholePeriod,
     },
     white::White32,
 };
 
-/// A [`PeriodicNoise`] that produces [`GridSquare`] using [`PowerOf2Period`].
+/// A [`ScalableNoise`] that produces [`GridSquare`] using [`PowerOf2Period`].
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct OrthoGridPowerOf2(pub PowerOf2Period);
 
-/// A [`PeriodicNoise`] that produces [`GridSquare`] using [`WholePeriod`].
+/// A [`ScalableNoise`] that produces [`GridSquare`] using [`WholePeriod`].
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct OrthoGridInteger(pub WholePeriod);
 
-/// A [`PeriodicNoise`] that produces [`GridSquare`] using [`Frequency`]
+/// A [`ScalableNoise`] that produces [`GridSquare`] using [`Frequency`]
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct OrthoGrid(pub Frequency);
 
@@ -246,50 +246,50 @@ impl PeriodicPoints for GridSquare<UVec4, Vec4> {
     }
 }
 
-impl PeriodicNoise<Frequency> for OrthoGrid {
+impl ScalableNoise<Frequency> for OrthoGrid {
     #[inline]
-    fn get_period(&self) -> Frequency {
+    fn get_scale(&self) -> Frequency {
         self.0
     }
 
     #[inline]
-    fn set_period(&mut self, period: Frequency) {
+    fn set_scale(&mut self, period: Frequency) {
         self.0 = period;
     }
 }
 
-impl PeriodicNoise<Period> for OrthoGrid {
+impl ScalableNoise<Period> for OrthoGrid {
     #[inline]
-    fn get_period(&self) -> Period {
+    fn get_scale(&self) -> Period {
         self.0.into()
     }
 
     #[inline]
-    fn set_period(&mut self, period: Period) {
+    fn set_scale(&mut self, period: Period) {
         self.0 = period.into();
     }
 }
 
-impl PeriodicNoise<WholePeriod> for OrthoGridInteger {
+impl ScalableNoise<WholePeriod> for OrthoGridInteger {
     #[inline]
-    fn get_period(&self) -> WholePeriod {
+    fn get_scale(&self) -> WholePeriod {
         self.0
     }
 
     #[inline]
-    fn set_period(&mut self, period: WholePeriod) {
+    fn set_scale(&mut self, period: WholePeriod) {
         self.0 = period;
     }
 }
 
-impl PeriodicNoise<PowerOf2Period> for OrthoGridPowerOf2 {
+impl ScalableNoise<PowerOf2Period> for OrthoGridPowerOf2 {
     #[inline]
-    fn get_period(&self) -> PowerOf2Period {
+    fn get_scale(&self) -> PowerOf2Period {
         self.0
     }
 
     #[inline]
-    fn set_period(&mut self, period: PowerOf2Period) {
+    fn set_scale(&mut self, period: PowerOf2Period) {
         self.0 = period;
     }
 }
