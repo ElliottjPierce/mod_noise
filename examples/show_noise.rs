@@ -17,6 +17,7 @@ use mod_noise::noise::{
 
 /// Holds a version of the noise
 pub struct NoiseOption {
+    name: &'static str,
     frequency: Frequency,
     seed: u64,
     noise: Box<dyn PeriodicNoise<Vec2, Frequency, Output = UNorm>>,
@@ -51,6 +52,17 @@ pub struct NoiseOptions {
 }
 
 fn main() -> AppExit {
+    println!(
+        r#"
+        ---SHOW NOISE EXAMPLE---
+
+        Controls:
+        - Right arrow and left arrow change noise types.
+        - W and S change seeds.
+        - A and D change noise scale. Image resolution doesn't change so there are limits.
+
+        "#
+    );
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(
@@ -58,8 +70,9 @@ fn main() -> AppExit {
             |mut commands: Commands, mut images: ResMut<Assets<Image>>| {
                 let mut noise = NoiseOptions {
                     options: vec![NoiseOption {
-                        frequency: Period(0.5).into(),
-                        seed: 92093765906047548,
+                        name: "Basic white noise",
+                        frequency: Period(1.0).into(),
+                        seed: 0,
                         noise: Box::new(CellularNoise::<OrthoGrid, Adapter<UNorm>>::default()),
                     }],
                     selected: 0,
@@ -142,5 +155,6 @@ fn update_system(
             .set_seed(&mut SeedGenerator::new_from_u64(current.seed));
         current.noise.set_scale(current.frequency);
         current.display_image(images.get_mut(image).unwrap());
+        println!("Updated {}.", current.name);
     }
 }
