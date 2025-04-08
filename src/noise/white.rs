@@ -229,8 +229,6 @@ mod tests {
         let _tmp = rng.raw_sample(UVec2::new(1, 2));
         let _tmp = rng.raw_sample(UVec3::new(1, 2, 3));
         let _tmp = rng.raw_sample(UVec4::new(1, 2, 3, 4));
-
-        #[cfg(feature = "alloc")]
         let _tmp = rng.raw_sample(alloc::vec![1u32, 2, 3, 4, 5].as_slice());
     }
 }

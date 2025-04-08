@@ -4,15 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy_math = { version = "0.15", default-features = false }
+bevy_math = { version = "0.15", default-features = false, features = ["curve"] }
 rand = { version = "0.9.0", default-features = false }
 
 [dev-dependencies]
 bevy = "0.15"
 
 [features]
-default = ["alloc"]
-alloc = ["rand/alloc"]
 
 [lints.clippy]
 doc_markdown = "warn"
