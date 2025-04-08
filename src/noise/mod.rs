@@ -3,6 +3,7 @@
 use white::SeedGenerator;
 
 pub mod common_mapping;
+pub mod grid;
 pub mod norm;
 pub mod periodic;
 pub mod white;
