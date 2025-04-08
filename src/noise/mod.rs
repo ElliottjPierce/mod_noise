@@ -19,7 +19,7 @@ pub trait NoiseValue: Sized + Clone + 'static {
 
     /// Passes this noise value through another noise.
     #[inline]
-    fn and_then<T: DirectNoise<Self>>(self, noise: T) -> T::Output {
+    fn and_then<T: DirectNoise<Self>>(self, noise: &T) -> T::Output {
         noise.raw_sample(self)
     }
 }
