@@ -8,7 +8,7 @@ use bevy_math::{
     UVec4,
 };
 
-use super::Noise;
+use super::DirectNoise;
 
 /// This creates a white noise implementation
 macro_rules! impl_white {
@@ -18,7 +18,7 @@ macro_rules! impl_white {
         #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
         pub struct $name(pub $dt);
 
-        impl Noise<$dt> for $name {
+        impl DirectNoise<$dt> for $name {
             type Output = $dt;
 
             #[inline(always)]
@@ -29,7 +29,7 @@ macro_rules! impl_white {
             }
         }
 
-        impl<const N: usize> Noise< [$dt; N] > for $name {
+        impl<const N: usize> DirectNoise< [$dt; N] > for $name {
             type Output = $dt;
 
             #[inline(always)]
@@ -40,7 +40,7 @@ macro_rules! impl_white {
         }
 
         #[cfg(feature = "alloc")]
-        impl Noise< Vec<$dt> > for $name {
+        impl DirectNoise< Vec<$dt> > for $name {
             type Output = $dt;
 
             #[inline(always)]
@@ -50,7 +50,7 @@ macro_rules! impl_white {
             }
         }
 
-        impl Noise< Option<$dt> > for $name {
+        impl DirectNoise< Option<$dt> > for $name {
             type Output = $dt;
 
             #[inline(always)]
@@ -63,7 +63,7 @@ macro_rules! impl_white {
             }
         }
 
-        impl Noise<&'_ [$dt]> for $name {
+        impl DirectNoise<&'_ [$dt]> for $name {
             type Output = $dt;
 
             #[inline(always)]
@@ -77,7 +77,7 @@ macro_rules! impl_white {
         }
 
         $(
-            impl Noise< $input > for $name {
+            impl DirectNoise< $input > for $name {
                 type Output = $dt;
 
                 #[inline(always)]

@@ -5,7 +5,7 @@ use bevy::{
     prelude::*,
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
-use mod_noise::noise::{Noise, NoiseValue, norm::UNorm, white::White32};
+use mod_noise::noise::{DirectNoise, NoiseValue, norm::UNorm, white::White32};
 
 fn main() -> AppExit {
     App::new()

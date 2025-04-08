@@ -2,10 +2,10 @@
 
 use bevy_math::{Curve, UVec2, Vec2, curve::Ease};
 
-use super::Noise;
+use super::DirectNoise;
 
 /// Represents a [`Noise`] that divides its domain into [`PeriodicSegment`].
-pub trait PeriodicNoise<P>: Noise<P, Output: PeriodicSegment<P>> {
+pub trait PeriodicNoise<P>: DirectNoise<P, Output: PeriodicSegment<P>> {
     /// The interval over which values may repeat.
     type Period: Clone + 'static;
 
@@ -160,7 +160,7 @@ macro_rules! impl_grid_dimension {
             }
         }
 
-        impl Noise<$f> for OrthoGrid {
+        impl DirectNoise<$f> for OrthoGrid {
             type Output = GridSquare<$u, $f>;
 
             #[inline]

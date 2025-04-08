@@ -23,7 +23,7 @@ pub trait CorolatedNoiseType<T>: NoiseValue {
 
 /// Represents a noise function that samples at a point of type `I` and returns a result of type
 /// `O`.
-pub trait Noise<I> {
+pub trait DirectNoise<I> {
     /// The result of the noise.
     type Output: NoiseValue;
 
@@ -40,13 +40,13 @@ pub trait Noise<I> {
 }
 
 /// Represents a differentiable [`Noise`].
-pub trait GradientNoise<I>: Noise<I> {
+pub trait GradientNoise<I>: DirectNoise<I> {
     /// Samples the noise at `input`, returning the gradient and the output.
     fn sample_gradient(&self, input: I) -> (I, Self::Output);
 }
 
 /// Represents a [`Noise`] that can change its input instead of producing an output.
-pub trait WarpingNoise<I>: Noise<I, Output = I> {
+pub trait WarpingNoise<I>: DirectNoise<I, Output = I> {
     /// Warps or moves around the input value.
     fn warp_domain(&self, input: &mut I);
 }
@@ -58,7 +58,7 @@ impl<T: NoiseValue> CorolatedNoiseType<T> for T {
     }
 }
 
-impl<I: Copy + core::ops::AddAssign, T: Noise<I, Output = I>> WarpingNoise<I> for T {
+impl<I: Copy + core::ops::AddAssign, T: DirectNoise<I, Output = I>> WarpingNoise<I> for T {
     #[inline]
     fn warp_domain(&self, input: &mut I) {
         *input += self.raw_sample(*input);
@@ -121,7 +121,7 @@ mod tests {
 
     struct NopNoise;
 
-    impl Noise<f32> for NopNoise {
+    impl DirectNoise<f32> for NopNoise {
         type Output = f32;
 
         #[inline]
