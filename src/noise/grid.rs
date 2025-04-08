@@ -12,15 +12,15 @@ use super::{
 };
 
 /// A [`PeriodicNoise`] that produces [`GridSquare`] using [`PowerOf2Period`].
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct OrthoGridPowerOf2(pub PowerOf2Period);
 
 /// A [`PeriodicNoise`] that produces [`GridSquare`] using [`WholePeriod`].
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct OrthoGridInteger(pub WholePeriod);
 
 /// A [`PeriodicNoise`] that produces [`GridSquare`] using [`Frequency`]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct OrthoGrid(pub Frequency);
 
 /// Represents a grid square.
@@ -105,7 +105,7 @@ macro_rules! impl_grid_dimension {
             fn into_relative(self, entropy: u32) -> RelativePeriodicPoint<$f> {
                 RelativePeriodicPoint {
                     offset: self.offset,
-                    seed: White32(entropy).sample(self.corner),
+                    seed: White32(entropy).raw_sample(self.corner),
                 }
             }
         }

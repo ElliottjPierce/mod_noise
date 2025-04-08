@@ -1,5 +1,6 @@
 //! Contains various noise functions
 
+use periodic::PeriodicNoise;
 use white::SeedGenerator;
 
 pub mod cellular;
@@ -32,7 +33,15 @@ pub trait CorolatedNoiseType<T>: NoiseValue {
 }
 
 /// Represents some noise function.
-pub trait Noise {
+pub trait Noise: Send + Sync {
+    /// Sets the seed of the noise if applicable.
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        _ = seed;
+    }
+}
+
+/// Additional items for [`Noise`] that are separate to keep [`Noise`] object safe.
+pub trait NoiseExt: Noise {
     /// Samples the noise.
     ///
     /// This is separate from [`raw_sample`](Noise::raw_sample) for future proofing.
@@ -45,17 +54,22 @@ pub trait Noise {
     }
 
     /// Sets the seed of the noise if applicable.
-    fn set_seed(&mut self, seed: &mut SeedGenerator) {
-        _ = seed;
-    }
-
-    /// Sets the seed of the noise if applicable.
     #[inline]
     fn with_seed(mut self, seed: &mut SeedGenerator) -> Self
     where
         Self: Sized,
     {
         self.set_seed(seed);
+        self
+    }
+
+    /// Sets the [`Period`](PeriodicNoise::Period) of the noise.
+    #[inline]
+    fn with_period<T>(mut self, period: T) -> Self
+    where
+        Self: Sized + PeriodicNoise<T>,
+    {
+        self.set_period(period);
         self
     }
 }
@@ -94,6 +108,8 @@ impl<I: Copy + core::ops::AddAssign, T: DirectNoise<I, Output = I>> WarpingNoise
         *input += self.raw_sample(*input);
     }
 }
+
+impl<T: Noise> NoiseExt for T {}
 
 macro_rules! impl_noise_value {
     ($($name:ty),*,) => {

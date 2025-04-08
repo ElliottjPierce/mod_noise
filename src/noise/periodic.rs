@@ -10,16 +10,6 @@ pub trait PeriodicNoise<T>: Noise {
     fn get_period(&self) -> T;
     /// Sets the [`Period`](PeriodicNoise::Period) of the noise.
     fn set_period(&mut self, period: T);
-
-    /// Sets the [`Period`](PeriodicNoise::Period) of the noise.
-    #[inline]
-    fn with_period(mut self, period: T) -> Self
-    where
-        Self: Sized,
-    {
-        self.set_period(period);
-        self
-    }
 }
 
 /// Represents a segment of a noise result.
