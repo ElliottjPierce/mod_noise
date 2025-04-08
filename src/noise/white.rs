@@ -55,9 +55,11 @@ macro_rules! impl_white {
             fn raw_sample(&self, input: &[$dt]) -> $dt {
                 let mut val: $dt = $key;
                 for &v in input {
-                    // The breaker value must be depended on both the `v` and the `val` to prevent it getting stuck.
+                    // The breaker value must depended on both the `v` and the `val` to prevent it getting stuck.
+                    // We need addition to keep this getting stuck when `v` or `val` are 0.
                     let breaker = (v ^ val).wrapping_add($key);
-                    // We need the multiplication to put each axis on different orders, and we need addition to make each axis "recoverable" from zero.
+                    // We need the multiplication to put each axis on different orders, and we need xor to make each axis "recoverable" from zero.
+                    // The multiplication can be pipelined with computing the `breaker`. Effectively the cost is just multiplication.
                     val = v.wrapping_mul(val) ^ breaker;
                 }
                 self.raw_sample(val)
