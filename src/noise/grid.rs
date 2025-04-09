@@ -153,7 +153,7 @@ macro_rules! impl_grid_dimension {
             fn raw_sample(&self, input: $f) -> Self::Output {
                 let scaled = input * self.0.0;
                 GridSquare {
-                    least_corner: scaled.$f_to_i().map_to::<$u>(),
+                    least_corner: scaled.floor().$f_to_i().map_to::<$u>(),
                     offset_from_corner: scaled.fract_gl(),
                 }
             }
