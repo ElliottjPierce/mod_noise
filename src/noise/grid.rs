@@ -206,9 +206,9 @@ impl SamplablePeriodicPoints for GridSquare<UVec2, Vec2> {
         let mix = self.offset_from_corner.map(|t| curve.sample_unchecked(t));
 
         // lerp
-        let left = lerp(ld, lu).sample_unchecked(mix.y);
-        let right = lerp(rd, ru).sample_unchecked(mix.y);
-        lerp(left, right).sample_unchecked(mix.x)
+        let l = lerp(ld, lu).sample_unchecked(mix.y);
+        let r = lerp(rd, ru).sample_unchecked(mix.y);
+        lerp(l, r).sample_unchecked(mix.x)
     }
 }
 
@@ -261,6 +261,84 @@ impl GridSquare<UVec3, Vec3> {
             f(self.from_offset(UVec3::new(1, 1, 0))),
             f(self.from_offset(UVec3::new(1, 1, 1))),
         ]
+    }
+}
+
+impl SamplablePeriodicPoints for GridSquare<UVec3, Vec3> {
+    #[inline]
+    fn sample_smooth<T, L: Curve<T>>(
+        &self,
+        f: impl FnMut(Self::Point) -> T,
+        lerp: impl Fn(T, T) -> L,
+        curve: impl Curve<f32>,
+    ) -> T {
+        // points
+        let [ldb, ldf, lub, luf, rdb, rdf, rub, ruf] = self.corners_map(f);
+        let mix = self.offset_from_corner.map(|t| curve.sample_unchecked(t));
+
+        // lerp
+        let ld = lerp(ldb, ldf).sample_unchecked(mix.z);
+        let lu = lerp(lub, luf).sample_unchecked(mix.z);
+        let rd = lerp(rdb, rdf).sample_unchecked(mix.z);
+        let ru = lerp(rub, ruf).sample_unchecked(mix.z);
+        let l = lerp(ld, lu).sample_unchecked(mix.y);
+        let r = lerp(rd, ru).sample_unchecked(mix.y);
+        lerp(l, r).sample_unchecked(mix.x)
+    }
+}
+
+impl DiferentiablePeriodicPoints for GridSquare<UVec3, Vec3> {
+    type Gradient<D> = [D; 3];
+
+    #[inline]
+    fn sample_gradient_smooth<T: bevy_math::HasTangent, L: Curve<T::Tangent>>(
+        &self,
+        f: impl FnMut(Self::Point) -> T,
+        difference: impl Fn(&T, &T) -> T::Tangent,
+        lerp: impl Fn(T::Tangent, T::Tangent) -> L,
+        curve: impl bevy_math::curve::derivatives::SampleDerivative<f32>,
+    ) -> Self::Gradient<T::Tangent> {
+        // points// points
+        let [ldb, ldf, lub, luf, rdb, rdf, rub, ruf] = self.corners_map(f);
+        let [mix_x, mix_y, mix_z] = self
+            .offset_from_corner
+            .to_array()
+            .map(|t| curve.sample_with_derivative_unchecked(t));
+
+        // derivatives
+        let ldb_ldf = difference(&ldb, &ldf);
+        let lub_luf = difference(&lub, &luf);
+        let rdb_rdf = difference(&rdb, &rdf);
+        let rub_ruf = difference(&rub, &ruf);
+
+        let ldb_lub = difference(&ldb, &lub);
+        let ldf_luf = difference(&ldf, &luf);
+        let rdb_rub = difference(&rdb, &rub);
+        let rdf_ruf = difference(&rdf, &ruf);
+
+        let ldb_rdb = difference(&ldb, &rdb);
+        let ldf_rdf = difference(&ldf, &rdf);
+        let lub_rub = difference(&lub, &rub);
+        let luf_ruf = difference(&luf, &ruf);
+
+        // lerp
+        let dx = {
+            let d = lerp(ldb_rdb, ldf_rdf).sample_unchecked(mix_z.value);
+            let u = lerp(lub_rub, luf_ruf).sample_unchecked(mix_z.value);
+            lerp(d, u).sample_unchecked(mix_y.value)
+        } * mix_x.derivative;
+        let dy = {
+            let l = lerp(ldb_lub, ldf_luf).sample_unchecked(mix_z.value);
+            let r = lerp(rdb_rub, rdf_ruf).sample_unchecked(mix_z.value);
+            lerp(l, r).sample_unchecked(mix_x.value)
+        } * mix_y.derivative;
+        let dz = {
+            let l = lerp(ldb_ldf, lub_luf).sample_unchecked(mix_y.value);
+            let r = lerp(rdb_rdf, rub_ruf).sample_unchecked(mix_y.value);
+            lerp(l, r).sample_unchecked(mix_x.value)
+        } * mix_z.derivative;
+
+        [dx, dy, dz]
     }
 }
 
