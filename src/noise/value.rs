@@ -3,8 +3,8 @@
 use bevy_math::{Curve, curve::Ease};
 
 use super::{
-    DirectNoise, Noise,
-    periodic::{PeriodicPoint, PeriodicSegment, SamplablePeriodicPoints},
+    DirectNoise, Noise, NoiseValue,
+    periodic::{PeriodicPoint, PeriodicSegment, SamplablePeriodicPoints, ScalableNoise},
     white::SeedGenerator,
 };
 
@@ -45,5 +45,53 @@ impl<
             Ease::interpolating_curve_unbounded,
             &self.smoothing_curve,
         )
+    }
+}
+
+/// Represents slicing a domain into segments via `P` and then smoothly interpolating between segments via [`SmoothSegmentNoise<N, C>`]
+pub struct ValueNoise<P, N, C> {
+    /// The noise for making the segments.
+    pub periodic: P,
+    /// The noise for each segment.
+    pub segment_noise: SmoothSegmentNoise<N, C>,
+}
+
+impl<P: Noise, N, C> Noise for ValueNoise<P, N, C>
+where
+    SmoothSegmentNoise<N, C>: Noise,
+{
+    #[inline]
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        self.segment_noise.set_seed(seed);
+        self.periodic.set_seed(seed);
+    }
+}
+
+impl<I, P: DirectNoise<I, Output: PeriodicSegment>, N, C> DirectNoise<I> for ValueNoise<P, N, C>
+where
+    SmoothSegmentNoise<N, C>: DirectNoise<P::Output>,
+{
+    type Output = <SmoothSegmentNoise<N, C> as DirectNoise<P::Output>>::Output;
+
+    #[inline]
+    fn raw_sample(&self, input: I) -> Self::Output {
+        self.periodic
+            .raw_sample(input)
+            .and_then(&self.segment_noise)
+    }
+}
+
+impl<T, P: ScalableNoise<T>, N, C> ScalableNoise<T> for ValueNoise<P, N, C>
+where
+    Self: Noise,
+{
+    #[inline]
+    fn get_scale(&self) -> T {
+        self.periodic.get_scale()
+    }
+
+    #[inline]
+    fn set_scale(&mut self, period: T) {
+        self.periodic.set_scale(period);
     }
 }
