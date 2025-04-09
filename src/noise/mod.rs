@@ -90,8 +90,11 @@ pub trait DirectNoise<I>: Noise {
 
 /// Represents a differentiable [`Noise`].
 pub trait GradientNoise<I>: DirectNoise<I> {
+    /// The kind of gradient this noise has.
+    type Gradient;
+
     /// Samples the noise at `input`, returning the gradient and the output.
-    fn sample_gradient(&self, input: I) -> (I, Self::Output);
+    fn sample_gradient(&self, input: I) -> (Self::Gradient, Self::Output);
 }
 
 /// Represents a [`Noise`] that can change its input instead of producing an output.
@@ -186,6 +189,8 @@ mod tests {
     }
 
     impl GradientNoise<f32> for NopNoise {
+        type Gradient = f32;
+
         #[inline]
         fn sample_gradient(&self, input: f32) -> (f32, Self::Output) {
             (0.0, input)

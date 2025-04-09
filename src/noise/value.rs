@@ -1,10 +1,18 @@
 //! Contains noise for interpolating within a periodic segment.
 
-use bevy_math::{Curve, curve::Ease};
+use core::ops::Sub;
+
+use bevy_math::{
+    Curve, HasTangent,
+    curve::{Ease, derivatives::SampleDerivative},
+};
 
 use super::{
-    DirectNoise, Noise, NoiseValue,
-    periodic::{PeriodicPoint, PeriodicSegment, SamplablePeriodicPoints, ScalableNoise},
+    DirectNoise, GradientNoise, Noise, NoiseValue,
+    periodic::{
+        DiferentiablePeriodicPoints, PeriodicPoint, PeriodicSegment, SamplablePeriodicPoints,
+        ScalableNoise,
+    },
     white::SeedGenerator,
 };
 
@@ -48,6 +56,39 @@ impl<
     }
 }
 
+impl<
+    T: PeriodicSegment<Points: DiferentiablePeriodicPoints>,
+    O: Ease + Copy + HasTangent<Tangent = O> + Sub<O, Output = O>,
+    N: DirectNoise<u32, Output = O>,
+    C: SampleDerivative<f32> + Send + Sync,
+> GradientNoise<T> for SmoothSegmentNoise<N, C>
+{
+    type Gradient = <T::Points as DiferentiablePeriodicPoints>::Gradient<O>;
+
+    #[inline]
+    fn sample_gradient(&self, input: T) -> (Self::Gradient, Self::Output) {
+        let points = input.get_points();
+        let gradient = points.sample_gradient_smooth(
+            |point| {
+                let point = point.into_relative(self.seed).seed;
+                self.noise.raw_sample(point)
+            },
+            |start, end| *end - *start,
+            Ease::interpolating_curve_unbounded,
+            &self.smoothing_curve,
+        );
+        let value = points.sample_smooth(
+            |point| {
+                let point = point.into_relative(self.seed).seed;
+                self.noise.raw_sample(point)
+            },
+            Ease::interpolating_curve_unbounded,
+            &self.smoothing_curve,
+        );
+        (gradient, value)
+    }
+}
+
 /// Represents slicing a domain into segments via `P` and then smoothly interpolating between segments via [`SmoothSegmentNoise<N, C>`]
 pub struct ValueNoise<P, N, C> {
     /// The noise for making the segments.
@@ -78,6 +119,19 @@ where
         self.periodic
             .raw_sample(input)
             .and_then(&self.segment_noise)
+    }
+}
+
+impl<I, P: DirectNoise<I, Output: PeriodicSegment>, N, C> GradientNoise<I> for ValueNoise<P, N, C>
+where
+    SmoothSegmentNoise<N, C>: GradientNoise<P::Output>,
+{
+    type Gradient = <SmoothSegmentNoise<N, C> as GradientNoise<P::Output>>::Gradient;
+
+    #[inline]
+    fn sample_gradient(&self, input: I) -> (Self::Gradient, Self::Output) {
+        self.segment_noise
+            .sample_gradient(self.periodic.raw_sample(input))
     }
 }
 
