@@ -54,7 +54,7 @@ pub trait SamplablePeriodicPoints: PeriodicPoints {
         &self,
         f: impl FnMut(Self::Point) -> T,
         lerp: impl Fn(T, T) -> L,
-        curve: impl Curve<f32>,
+        curve: &impl Curve<f32>,
     ) -> T;
 }
 
@@ -72,7 +72,7 @@ pub trait DiferentiablePeriodicPoints: SamplablePeriodicPoints {
         f: impl FnMut(Self::Point) -> T,
         difference: impl Fn(&T, &T) -> T::Tangent,
         lerp: impl Fn(T::Tangent, T::Tangent) -> L,
-        curve: impl SampleDerivative<f32>,
+        curve: &impl SampleDerivative<f32>,
     ) -> Self::Gradient<T::Tangent>;
 }
 

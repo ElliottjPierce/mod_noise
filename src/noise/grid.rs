@@ -1,6 +1,9 @@
 //! Periodic noise for orthogonal grids
 
-use bevy_math::{Curve, IVec2, IVec3, IVec4, UVec2, UVec3, UVec4, Vec2, Vec3, Vec3A, Vec4};
+use bevy_math::{
+    Curve, IVec2, IVec3, IVec4, UVec2, UVec3, UVec4, Vec2, Vec3, Vec3A, Vec4,
+    curve::derivatives::SampleDerivative,
+};
 
 use super::{
     DirectNoise, Noise, NoiseValue,
@@ -199,7 +202,7 @@ impl SamplablePeriodicPoints for GridSquare<UVec2, Vec2> {
         &self,
         f: impl FnMut(Self::Point) -> T,
         lerp: impl Fn(T, T) -> L,
-        curve: impl Curve<f32>,
+        curve: &impl Curve<f32>,
     ) -> T {
         // points
         let [ld, lu, rd, ru] = self.corners_map(f);
@@ -221,7 +224,7 @@ impl DiferentiablePeriodicPoints for GridSquare<UVec2, Vec2> {
         f: impl FnMut(Self::Point) -> T,
         difference: impl Fn(&T, &T) -> T::Tangent,
         lerp: impl Fn(T::Tangent, T::Tangent) -> L,
-        curve: impl bevy_math::curve::derivatives::SampleDerivative<f32>,
+        curve: &impl SampleDerivative<f32>,
     ) -> Self::Gradient<T::Tangent> {
         // points
         let [ld, lu, rd, ru] = self.corners_map(f);
@@ -270,7 +273,7 @@ impl SamplablePeriodicPoints for GridSquare<UVec3, Vec3> {
         &self,
         f: impl FnMut(Self::Point) -> T,
         lerp: impl Fn(T, T) -> L,
-        curve: impl Curve<f32>,
+        curve: &impl Curve<f32>,
     ) -> T {
         // points
         let [ldb, ldf, lub, luf, rdb, rdf, rub, ruf] = self.corners_map(f);
@@ -296,7 +299,7 @@ impl DiferentiablePeriodicPoints for GridSquare<UVec3, Vec3> {
         f: impl FnMut(Self::Point) -> T,
         difference: impl Fn(&T, &T) -> T::Tangent,
         lerp: impl Fn(T::Tangent, T::Tangent) -> L,
-        curve: impl bevy_math::curve::derivatives::SampleDerivative<f32>,
+        curve: &impl SampleDerivative<f32>,
     ) -> Self::Gradient<T::Tangent> {
         // points// points
         let [ldb, ldf, lub, luf, rdb, rdf, rub, ruf] = self.corners_map(f);
@@ -372,7 +375,7 @@ impl SamplablePeriodicPoints for GridSquare<UVec3, Vec3A> {
         &self,
         f: impl FnMut(Self::Point) -> T,
         lerp: impl Fn(T, T) -> L,
-        curve: impl Curve<f32>,
+        curve: &impl Curve<f32>,
     ) -> T {
         // points
         let [ldb, ldf, lub, luf, rdb, rdf, rub, ruf] = self.corners_map(f);
@@ -398,7 +401,7 @@ impl DiferentiablePeriodicPoints for GridSquare<UVec3, Vec3A> {
         f: impl FnMut(Self::Point) -> T,
         difference: impl Fn(&T, &T) -> T::Tangent,
         lerp: impl Fn(T::Tangent, T::Tangent) -> L,
-        curve: impl bevy_math::curve::derivatives::SampleDerivative<f32>,
+        curve: &impl SampleDerivative<f32>,
     ) -> Self::Gradient<T::Tangent> {
         // points// points
         let [ldb, ldf, lub, luf, rdb, rdf, rub, ruf] = self.corners_map(f);
@@ -482,7 +485,7 @@ impl SamplablePeriodicPoints for GridSquare<UVec4, Vec4> {
         &self,
         f: impl FnMut(Self::Point) -> T,
         lerp: impl Fn(T, T) -> L,
-        curve: impl Curve<f32>,
+        curve: &impl Curve<f32>,
     ) -> T {
         // points
         let [
@@ -533,7 +536,7 @@ impl DiferentiablePeriodicPoints for GridSquare<UVec4, Vec4> {
         f: impl FnMut(Self::Point) -> T,
         difference: impl Fn(&T, &T) -> T::Tangent,
         lerp: impl Fn(T::Tangent, T::Tangent) -> L,
-        curve: impl bevy_math::curve::derivatives::SampleDerivative<f32>,
+        curve: &impl SampleDerivative<f32>,
     ) -> Self::Gradient<T::Tangent> {
         // points// points
         let [
