@@ -201,8 +201,11 @@ impl SamplablePeriodicPoints for GridSquare<UVec2, Vec2> {
         lerp: impl Fn(T, T) -> L,
         curve: impl Curve<f32>,
     ) -> T {
+        // points
         let [ld, lu, rd, ru] = self.corners_map(f);
         let mix = self.offset_from_corner.map(|t| curve.sample_unchecked(t));
+
+        // lerp
         let left = lerp(ld, lu).sample_unchecked(mix.y);
         let right = lerp(rd, ru).sample_unchecked(mix.y);
         lerp(left, right).sample_unchecked(mix.x)
@@ -220,18 +223,22 @@ impl DiferentiablePeriodicPoints for GridSquare<UVec2, Vec2> {
         lerp: impl Fn(T::Tangent, T::Tangent) -> L,
         curve: impl bevy_math::curve::derivatives::SampleDerivative<f32>,
     ) -> Self::Gradient<T::Tangent> {
+        // points
         let [ld, lu, rd, ru] = self.corners_map(f);
         let [mix_x, mix_y] = self
             .offset_from_corner
             .to_array()
             .map(|t| curve.sample_with_derivative_unchecked(t));
-        let l = difference(&ld, &lu);
-        let r = difference(&rd, &ru);
-        let d = difference(&ld, &rd);
-        let u = difference(&lu, &ru);
 
-        let dx = lerp(d, u).sample_unchecked(mix_y.value) * mix_x.derivative;
-        let dy = lerp(l, r).sample_unchecked(mix_x.value) * mix_y.derivative;
+        // derivatives
+        let ld_lu = difference(&ld, &lu);
+        let rd_ru = difference(&rd, &ru);
+        let ld_rd = difference(&ld, &rd);
+        let lu_ru = difference(&lu, &ru);
+
+        // lerp
+        let dx = lerp(ld_rd, lu_ru).sample_unchecked(mix_y.value) * mix_x.derivative;
+        let dy = lerp(ld_lu, rd_ru).sample_unchecked(mix_x.value) * mix_y.derivative;
         [dx, dy]
     }
 }
