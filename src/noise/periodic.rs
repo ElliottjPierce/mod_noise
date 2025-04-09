@@ -60,16 +60,20 @@ pub trait SamplablePeriodicPoints: PeriodicPoints {
 
 /// Represents some [`SamplablePeriodicPoints`] that is differentiable.
 pub trait DiferentiablePeriodicPoints: SamplablePeriodicPoints {
+    /// For some derivative type `D`, returns the gradient vector type that will hold each derivative.
+    /// Usually this is `[D; N]`, where `N` is the dimensions of the point.
+    type Gradient<D>;
+
     /// Interpolates between these points, producing the gradient of the interpolation.
     /// The bounds of `curve` are not checked.
     /// It is up to the caller to verify that they are valid for this domain.
     fn sample_gradient_smooth<T: HasTangent, L: Curve<T::Tangent>>(
         &self,
         f: impl FnMut(Self::Point) -> T,
-        difference: impl Fn(T, T) -> T::Tangent,
+        difference: impl Fn(&T, &T) -> T::Tangent,
         lerp: impl Fn(T::Tangent, T::Tangent) -> L,
         curve: impl SampleDerivative<f32>,
-    ) -> T::Tangent;
+    ) -> Self::Gradient<T::Tangent>;
 }
 
 /// Represents some [`PeriodicPoint`] locally by and offset and seed.

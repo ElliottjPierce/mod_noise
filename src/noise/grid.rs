@@ -5,8 +5,9 @@ use bevy_math::{Curve, IVec2, IVec3, IVec4, UVec2, UVec3, UVec4, Vec2, Vec3, Vec
 use super::{
     DirectNoise, Noise, NoiseValue,
     periodic::{
-        Frequency, Period, PeriodicPoint, PeriodicPoints, PeriodicSegment, PowerOf2Period,
-        RelativePeriodicPoint, SamplablePeriodicPoints, ScalableNoise, WholePeriod,
+        DiferentiablePeriodicPoints, Frequency, Period, PeriodicPoint, PeriodicPoints,
+        PeriodicSegment, PowerOf2Period, RelativePeriodicPoint, SamplablePeriodicPoints,
+        ScalableNoise, WholePeriod,
     },
     white::White32,
 };
@@ -189,6 +190,49 @@ impl GridSquare<UVec2, Vec2> {
             f(self.from_offset(UVec2::new(1, 0))),
             f(self.from_offset(UVec2::new(1, 1))),
         ]
+    }
+}
+
+impl SamplablePeriodicPoints for GridSquare<UVec2, Vec2> {
+    #[inline]
+    fn sample_smooth<T, L: Curve<T>>(
+        &self,
+        f: impl FnMut(Self::Point) -> T,
+        lerp: impl Fn(T, T) -> L,
+        curve: impl Curve<f32>,
+    ) -> T {
+        let [ld, lu, rd, ru] = self.corners_map(f);
+        let mix = self.offset_from_corner.map(|t| curve.sample_unchecked(t));
+        let left = lerp(ld, lu).sample_unchecked(mix.y);
+        let right = lerp(rd, ru).sample_unchecked(mix.y);
+        lerp(left, right).sample_unchecked(mix.x)
+    }
+}
+
+impl DiferentiablePeriodicPoints for GridSquare<UVec2, Vec2> {
+    type Gradient<D> = [D; 2];
+
+    #[inline]
+    fn sample_gradient_smooth<T: bevy_math::HasTangent, L: Curve<T::Tangent>>(
+        &self,
+        f: impl FnMut(Self::Point) -> T,
+        difference: impl Fn(&T, &T) -> T::Tangent,
+        lerp: impl Fn(T::Tangent, T::Tangent) -> L,
+        curve: impl bevy_math::curve::derivatives::SampleDerivative<f32>,
+    ) -> Self::Gradient<T::Tangent> {
+        let [ld, lu, rd, ru] = self.corners_map(f);
+        let [mix_x, mix_y] = self
+            .offset_from_corner
+            .to_array()
+            .map(|t| curve.sample_with_derivative_unchecked(t));
+        let l = difference(&ld, &lu);
+        let r = difference(&rd, &ru);
+        let d = difference(&ld, &rd);
+        let u = difference(&lu, &ru);
+
+        let dx = lerp(d, u).sample_unchecked(mix_y.value) * mix_x.derivative;
+        let dy = lerp(l, r).sample_unchecked(mix_x.value) * mix_y.derivative;
+        [dx, dy]
     }
 }
 
