@@ -153,6 +153,7 @@ macro_rules! impl_grid_dimension {
             fn raw_sample(&self, input: $f) -> Self::Output {
                 let scaled = input * self.0.0;
                 GridSquare {
+                    // needing floor is annoying, but fract_gl calls it anyway, and it prevents some artifacts.
                     least_corner: scaled.floor().$f_to_i().map_to::<$u>(),
                     offset_from_corner: scaled.fract_gl(),
                 }
