@@ -17,6 +17,7 @@ use super::{
 };
 
 /// Represents some noise on the [`PeriodicPoint`] of a [`PeriodicSegment`] where values between those points are smoothed out accordingly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct SmoothSegmentNoise<N, C> {
     /// The noise for each of the [`PeriodicPoint`]s.
     pub noise: N,
@@ -90,6 +91,7 @@ impl<
 }
 
 /// Represents slicing a domain into segments via `P` and then smoothly interpolating between segments via [`SmoothSegmentNoise<N, C>`]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ValueNoise<P, N, C> {
     /// The noise for making the segments.
     pub periodic: P,

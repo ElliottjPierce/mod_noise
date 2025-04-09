@@ -6,6 +6,7 @@ use white::SeedGenerator;
 pub mod adapters;
 pub mod cellular;
 pub mod common_mapping;
+pub mod curves;
 pub mod grid;
 pub mod norm;
 pub mod periodic;
