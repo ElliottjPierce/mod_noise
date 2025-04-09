@@ -43,7 +43,10 @@ pub struct CellularNoise<P, N> {
     pub cell_noise: CellNoise<N>,
 }
 
-impl<P: Noise, N: Noise> Noise for CellularNoise<P, N> {
+impl<P: Noise, N> Noise for CellularNoise<P, N>
+where
+    CellNoise<N>: Noise,
+{
     #[inline]
     fn set_seed(&mut self, seed: &mut SeedGenerator) {
         self.cell_noise.set_seed(seed);
@@ -51,10 +54,11 @@ impl<P: Noise, N: Noise> Noise for CellularNoise<P, N> {
     }
 }
 
-impl<I, P: DirectNoise<I, Output: PeriodicSegment>, N: DirectNoise<u32>> DirectNoise<I>
-    for CellularNoise<P, N>
+impl<I, P: DirectNoise<I, Output: PeriodicSegment>, N> DirectNoise<I> for CellularNoise<P, N>
+where
+    CellNoise<N>: DirectNoise<P::Output>,
 {
-    type Output = N::Output;
+    type Output = <CellNoise<N> as DirectNoise<P::Output>>::Output;
 
     #[inline]
     fn raw_sample(&self, input: I) -> Self::Output {
@@ -62,7 +66,10 @@ impl<I, P: DirectNoise<I, Output: PeriodicSegment>, N: DirectNoise<u32>> DirectN
     }
 }
 
-impl<T, P: ScalableNoise<T>, N: Noise> ScalableNoise<T> for CellularNoise<P, N> {
+impl<T, P: ScalableNoise<T>, N> ScalableNoise<T> for CellularNoise<P, N>
+where
+    Self: Noise,
+{
     #[inline]
     fn get_scale(&self) -> T {
         self.periodic.get_scale()

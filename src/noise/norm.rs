@@ -2,6 +2,11 @@
 
 use core::ops::{Mul, MulAssign};
 
+use bevy_math::{
+    Curve,
+    curve::{Ease, FunctionCurve, Interval},
+};
+
 use super::{CorolatedNoiseType, NoiseValue};
 
 /// An `f32` in range [0, 1)
@@ -58,5 +63,12 @@ impl CorolatedNoiseType<u32> for UNorm {
     #[inline]
     fn map_from(value: u32) -> Self {
         Self::random(value)
+    }
+}
+
+impl Ease for UNorm {
+    fn interpolating_curve_unbounded(start: Self, end: Self) -> impl Curve<Self> {
+        let slope = end.0 - start.0;
+        FunctionCurve::new(Interval::UNIT, move |t| Self(start.0 + slope * t))
     }
 }

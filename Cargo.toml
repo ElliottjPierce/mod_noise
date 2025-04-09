@@ -4,12 +4,25 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy_math = { version = "0.15", default-features = false, features = ["curve"] }
+bevy_math = { version = "0.16.0-rc.3", default-features = false, features = [
+  "curve",
+] }
 
 [dev-dependencies]
-bevy = "0.15"
+bevy = "0.16.0-rc.3"
 
 [features]
+default = ["nostd-libm"]
+
+std = ["bevy_math/std"]
+libm = ["bevy_math/libm"]
+nostd-libm = ["bevy_math/nostd-libm"]
+
+[profile.dev]
+opt-level = 3
+
+[profile.test]
+opt-level = 1
 
 [lints.clippy]
 doc_markdown = "warn"

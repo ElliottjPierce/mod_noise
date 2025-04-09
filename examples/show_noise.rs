@@ -9,9 +9,11 @@ use mod_noise::noise::{
     PeriodicNoise,
     adapters::Adapter,
     cellular::CellularNoise,
+    curves::{Linear, Smoothstep},
     grid::OrthoGrid,
     norm::UNorm,
     periodic::{Frequency, Period},
+    value::ValueNoise,
     white::SeedGenerator,
 };
 
@@ -25,7 +27,10 @@ pub struct NoiseOption {
 
 impl NoiseOption {
     /// Displays the noise on the image.
-    pub fn display_image(&self, image: &mut Image) {
+    pub fn display_image(&mut self, image: &mut Image) {
+        self.noise
+            .set_seed(&mut SeedGenerator::new_from_u64(self.seed));
+        self.noise.set_scale(self.frequency);
         let width = image.width();
         let height = image.height();
 
@@ -68,15 +73,34 @@ fn main() -> AppExit {
         .add_systems(
             Startup,
             |mut commands: Commands, mut images: ResMut<Assets<Image>>| {
+                let dummy_image = images.add(Image::default_uninit());
                 let mut noise = NoiseOptions {
-                    options: vec![NoiseOption {
-                        name: "Basic white noise",
-                        frequency: Period(1.0).into(),
-                        seed: 0,
-                        noise: Box::new(CellularNoise::<OrthoGrid, Adapter<UNorm>>::default()),
-                    }],
+                    options: vec![
+                        NoiseOption {
+                            name: "Basic white noise",
+                            frequency: Period(32.0).into(),
+                            seed: 0,
+                            noise: Box::new(CellularNoise::<OrthoGrid, Adapter<UNorm>>::default()),
+                        },
+                        NoiseOption {
+                            name: "Basic value noise",
+                            frequency: Period(32.0).into(),
+                            seed: 0,
+                            noise: Box::new(
+                                ValueNoise::<OrthoGrid, Adapter<UNorm>, Linear>::default(),
+                            ),
+                        },
+                        NoiseOption {
+                            name: "Smooth value noise",
+                            frequency: Period(32.0).into(),
+                            seed: 0,
+                            noise: Box::new(
+                                ValueNoise::<OrthoGrid, Adapter<UNorm>, Smoothstep>::default(),
+                            ),
+                        },
+                    ],
                     selected: 0,
-                    image: Handle::weak_from_u128(0),
+                    image: dummy_image,
                 };
                 let mut image = Image::new_fill(
                     Extent3d {
@@ -150,10 +174,6 @@ fn update_system(
     }
 
     if changed {
-        current
-            .noise
-            .set_seed(&mut SeedGenerator::new_from_u64(current.seed));
-        current.noise.set_scale(current.frequency);
         current.display_image(images.get_mut(image).unwrap());
         println!("Updated {}.", current.name);
     }
