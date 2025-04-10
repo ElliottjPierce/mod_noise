@@ -10,6 +10,7 @@ use mod_noise::noise::{
     adapters::Adapter,
     cellular::CellNoise,
     curves::{Linear, Smoothstep},
+    gradient::{Hashed, SegmentalGradientNoise},
     grid::OrthoGrid,
     norm::UNorm,
     periodic::{Frequency, Period, TilingNoise},
@@ -100,6 +101,24 @@ fn main() -> AppExit {
                             noise: Box::new(TilingNoise::<
                                 OrthoGrid,
                                 SegmentalValueNoise<Adapter<UNorm>, Smoothstep>,
+                            >::default()),
+                        },
+                        NoiseOption {
+                            name: "Basic perlin noise",
+                            frequency: Period(32.0).into(),
+                            seed: 0,
+                            noise: Box::new(TilingNoise::<
+                                OrthoGrid,
+                                SegmentalGradientNoise<Hashed, Linear>,
+                            >::default()),
+                        },
+                        NoiseOption {
+                            name: "Smooth perlin noise",
+                            frequency: Period(32.0).into(),
+                            seed: 0,
+                            noise: Box::new(TilingNoise::<
+                                OrthoGrid,
+                                SegmentalGradientNoise<Hashed, Smoothstep>,
                             >::default()),
                         },
                     ],
