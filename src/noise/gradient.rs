@@ -25,9 +25,6 @@ use super::{
 /// [`NORMALIZING_FACTOR`](GradientGenerator::NORMALIZING_FACTOR) is within ±1, where d is the
 /// number od dimensions in `I`.
 pub trait GradientGenerator<I: NoiseValue>: Noise {
-    /// See [`GradientGenerator`]'s safety comment for info.
-    const NORMALIZING_FACTOR: f32;
-
     /// Gets the dot product of `I` with some gradient vector based on this seed.
     /// Each element of `offset` can be assumed to be in -1..=1.
     fn get_gradient_dot(&self, seed: u32, offset: I) -> f32;
@@ -134,10 +131,6 @@ impl<
     }
 }
 
-const SQRT_2: f32 = core::f32::consts::SQRT_2;
-const SQRT_3: f32 = 1.7320508;
-const SQRT_4: f32 = 2.0;
-
 /// A simple perlin noise source from uniquely random values.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct RuntimeRand;
@@ -145,11 +138,6 @@ pub struct RuntimeRand;
 impl Noise for RuntimeRand {}
 
 impl GradientGenerator<Vec2> for RuntimeRand {
-    // The dot product can not be grater than the product of the
-    // lengths, and one length is normalized and the other one is taken care of by setting
-    // `NORMALIZING_FACTOR` to 2.0.
-    const NORMALIZING_FACTOR: f32 = 2.0 / SQRT_2;
-
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec2) -> f32 {
         let vec = Vec2::new(
@@ -161,9 +149,6 @@ impl GradientGenerator<Vec2> for RuntimeRand {
 }
 
 impl GradientGenerator<Vec3> for RuntimeRand {
-    // See impl PerlinSource<Vec2> for RuntimeRand
-    const NORMALIZING_FACTOR: f32 = 2.0 / SQRT_3;
-
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec3) -> f32 {
         let vec = Vec3::new(
@@ -176,9 +161,6 @@ impl GradientGenerator<Vec3> for RuntimeRand {
 }
 
 impl GradientGenerator<Vec4> for RuntimeRand {
-    // See impl PerlinSource<Vec2> for RuntimeRand
-    const NORMALIZING_FACTOR: f32 = 2.0 / SQRT_4;
-
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec4) -> f32 {
         let vec = Vec4::new(
@@ -198,11 +180,6 @@ pub struct Hashed;
 impl Noise for Hashed {}
 
 impl GradientGenerator<Vec2> for Hashed {
-    // The dot product can not be grater than the product of the
-    // lengths, and one length is within √d. So their product is normalized by setting
-    // `NORMALIZING_FACTOR` to 1.0.
-    const NORMALIZING_FACTOR: f32 = 1.0 / SQRT_2;
-
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec2) -> f32 {
         let v = offset;
@@ -222,9 +199,6 @@ impl GradientGenerator<Vec2> for Hashed {
 }
 
 impl GradientGenerator<Vec3> for Hashed {
-    // See impl PerlinSource<Vec2> for Cardinal.
-    const NORMALIZING_FACTOR: f32 = 1.0 / SQRT_3;
-
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec3) -> f32 {
         let mut result = 0.0;
@@ -251,9 +225,6 @@ impl GradientGenerator<Vec3> for Hashed {
 }
 
 impl GradientGenerator<Vec4> for Hashed {
-    // See impl PerlinSource<Vec2> for Cardinal.
-    const NORMALIZING_FACTOR: f32 = 1.0 / SQRT_4;
-
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec4) -> f32 {
         let mut result = 0.0;
