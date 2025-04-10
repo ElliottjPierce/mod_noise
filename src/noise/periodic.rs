@@ -2,7 +2,7 @@
 
 use bevy_math::{Curve, HasTangent, curve::derivatives::SampleDerivative};
 
-use super::Noise;
+use super::{DirectNoise, GradientNoise, Noise, NoiseValue, white::SeedGenerator};
 
 /// Represents a [`Noise`] that divides its domain into [`PeriodicSegment`] according to some period `T`.
 pub trait ScalableNoise<T>: Noise {
@@ -174,5 +174,57 @@ impl Default for PowerOf2Period {
     #[inline]
     fn default() -> Self {
         Self(1)
+    }
+}
+
+/// Represents slicing a domain into [`PeriodicSegment`]s via `P` and then computing noise within segments via `N`.
+/// The noise itself may not tile in the traditional sense, but it is composed of tiles of noise.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct TilingNoise<P, N> {
+    /// The noise for making the [`PeriodicSegment`]s.
+    pub tilier: P,
+    /// The noise for each [`PeriodicSegment`].
+    pub tile: N,
+}
+
+impl<P: Noise, N: Noise> Noise for TilingNoise<P, N> {
+    #[inline]
+    fn set_seed(&mut self, seed: &mut SeedGenerator) {
+        self.tile.set_seed(seed);
+        self.tilier.set_seed(seed);
+    }
+}
+
+impl<I, P: DirectNoise<I, Output: PeriodicSegment>, N: DirectNoise<P::Output>> DirectNoise<I>
+    for TilingNoise<P, N>
+{
+    type Output = N::Output;
+
+    #[inline]
+    fn raw_sample(&self, input: I) -> Self::Output {
+        self.tilier.raw_sample(input).and_then(&self.tile)
+    }
+}
+
+impl<I, P: DirectNoise<I, Output: PeriodicSegment>, N: GradientNoise<P::Output>> GradientNoise<I>
+    for TilingNoise<P, N>
+{
+    type Gradient = N::Gradient;
+
+    #[inline]
+    fn sample_gradient(&self, input: I) -> (Self::Gradient, Self::Output) {
+        self.tile.sample_gradient(self.tilier.raw_sample(input))
+    }
+}
+
+impl<T, P: ScalableNoise<T>, N: Noise> ScalableNoise<T> for TilingNoise<P, N> {
+    #[inline]
+    fn get_scale(&self) -> T {
+        self.tilier.get_scale()
+    }
+
+    #[inline]
+    fn set_scale(&mut self, period: T) {
+        self.tilier.set_scale(period);
     }
 }
