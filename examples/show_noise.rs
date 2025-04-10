@@ -10,7 +10,7 @@ use mod_noise::noise::{
     adapters::Adapter,
     cellular::CellNoise,
     curves::{Linear, Smoothstep},
-    gradient::{GradTableQuick, RuntimeRand, SegmentalGradientNoise},
+    gradient::{FastBunchedGrads, FastGrads, RandomBunchedGrads, SegmentalGradientNoise},
     grid::OrthoGrid,
     norm::UNorm,
     periodic::{Frequency, Period, TilingNoise},
@@ -104,21 +104,30 @@ fn main() -> AppExit {
                             >::default()),
                         },
                         NoiseOption {
-                            name: "High Quality perlin noise",
+                            name: "RandomBunchedGrads perlin noise",
                             frequency: Period(32.0).into(),
                             seed: 0,
                             noise: Box::new(TilingNoise::<
                                 OrthoGrid,
-                                SegmentalGradientNoise<RuntimeRand, Smoothstep>,
+                                SegmentalGradientNoise<RandomBunchedGrads, Smoothstep>,
                             >::default()),
                         },
                         NoiseOption {
-                            name: "Low Quality perlin noise",
+                            name: "FastBunchedGrads perlin noise",
                             frequency: Period(32.0).into(),
                             seed: 0,
                             noise: Box::new(TilingNoise::<
                                 OrthoGrid,
-                                SegmentalGradientNoise<GradTableQuick, Smoothstep>,
+                                SegmentalGradientNoise<FastBunchedGrads, Smoothstep>,
+                            >::default()),
+                        },
+                        NoiseOption {
+                            name: "FastGrads perlin noise",
+                            frequency: Period(32.0).into(),
+                            seed: 0,
+                            noise: Box::new(TilingNoise::<
+                                OrthoGrid,
+                                SegmentalGradientNoise<FastGrads, Smoothstep>,
                             >::default()),
                         },
                     ],
