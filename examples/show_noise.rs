@@ -6,7 +6,7 @@ use bevy::{
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
 use mod_noise::noise::{
-    PeriodicNoise,
+    NoiseExt, PeriodicNoise,
     adapters::Adapter,
     cellular::CellNoise,
     curves::{Linear, Smoothstep},
@@ -14,6 +14,9 @@ use mod_noise::noise::{
         ApproximateUniformGradients, QuickGradients, RandomElementGradients, SegmentalGradientNoise,
     },
     grid::OrthoGrid,
+    layering::{
+        FractalNoise, FractalScaling, NormalizeOctavesInto, Octave, ProportionalAmplitude, Repeat,
+    },
     norm::UNorm,
     periodic::{Frequency, Period, TilingNoise},
     value::SegmentalValueNoise,
@@ -131,6 +134,35 @@ fn main() -> AppExit {
                                 OrthoGrid,
                                 SegmentalGradientNoise<ApproximateUniformGradients, Smoothstep>,
                             >::default()),
+                        },
+                        NoiseOption {
+                            name: "FBM with Quick Gradients perlin noise",
+                            frequency: Period(32.0).into(),
+                            seed: 0,
+                            noise: Box::new(FractalNoise {
+                                scale: FractalScaling {
+                                    overall: Frequency::default(),
+                                    gain: 1.7,
+                                },
+                                amplitude: ProportionalAmplitude {
+                                    proportion: 0.65,
+                                    ..Default::default()
+                                },
+                                result: NormalizeOctavesInto::<f32>::default(),
+                                finalizer: Adapter::<UNorm>::default(),
+                                seed: SeedGenerator::default(),
+                                octaves: Repeat::new(
+                                    8,
+                                    Octave::<_, Frequency, _>::new(TilingNoise::<
+                                        OrthoGrid,
+                                        SegmentalGradientNoise<
+                                            ApproximateUniformGradients,
+                                            Smoothstep,
+                                        >,
+                                    >::default_with_seed(
+                                    )),
+                                ),
+                            }),
                         },
                     ],
                     selected: 0,

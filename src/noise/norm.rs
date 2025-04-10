@@ -9,8 +9,8 @@ use bevy_math::{
 
 use super::{CorolatedNoiseType, NoiseValue};
 
-/// An `f32` in range [0, 1)
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+/// An `f32` in range 0..=1
+#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
 pub struct UNorm(f32);
 
 impl NoiseValue for UNorm {}
@@ -42,7 +42,7 @@ impl UNorm {
         self.0
     }
 
-    /// Constructs a new [`UNorm`], assuming it to be in range [0, 1).
+    /// Constructs a new [`UNorm`], assuming it to be in range 0..=1.
     #[inline]
     pub fn new_unchecked(value: f32) -> Self {
         Self(value)
@@ -69,6 +69,20 @@ impl CorolatedNoiseType<u32> for UNorm {
     #[inline]
     fn map_from(value: u32) -> Self {
         Self::random(value)
+    }
+}
+
+impl CorolatedNoiseType<f32> for UNorm {
+    #[inline]
+    fn map_from(value: f32) -> Self {
+        Self::new_unchecked(value.clamp(0.0, 1.0))
+    }
+}
+
+impl CorolatedNoiseType<UNorm> for f32 {
+    #[inline]
+    fn map_from(value: UNorm) -> Self {
+        value.get()
     }
 }
 

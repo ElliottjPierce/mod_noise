@@ -9,7 +9,7 @@ pub trait ScalableNoise<T>: Noise {
     /// Gets the scale of the noise.
     fn get_scale(&self) -> T;
     /// Sets the scale of the noise.
-    fn set_scale(&mut self, period: T);
+    fn set_scale(&mut self, scale: T);
 }
 
 /// Represents a segment of a noise result.
@@ -156,6 +156,20 @@ impl From<PowerOf2Period> for WholePeriod {
     #[inline]
     fn from(value: PowerOf2Period) -> Self {
         Self(1u32 << value.0)
+    }
+}
+
+impl From<Frequency> for WholePeriod {
+    #[inline]
+    fn from(value: Frequency) -> Self {
+        Self::from(Period::from(value))
+    }
+}
+
+impl From<Period> for WholePeriod {
+    #[inline]
+    fn from(value: Period) -> Self {
+        Self(value.0 as u32)
     }
 }
 

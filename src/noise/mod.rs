@@ -9,6 +9,7 @@ pub mod common_mapping;
 pub mod curves;
 pub mod gradient;
 pub mod grid;
+pub mod layering;
 pub mod norm;
 pub mod periodic;
 pub mod value;
@@ -75,6 +76,19 @@ pub trait NoiseExt: Noise {
     {
         self.set_scale(period);
         self
+    }
+
+    /// Creates a closure that constructs this [`Noise`] and configures it via a seed.
+    #[inline]
+    fn default_with_seed() -> impl Fn(&mut SeedGenerator) -> Self
+    where
+        Self: Default,
+    {
+        |seed| {
+            let mut noise = Self::default();
+            noise.set_seed(seed);
+            noise
+        }
     }
 }
 

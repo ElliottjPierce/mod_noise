@@ -177,6 +177,7 @@ impl Noise for White128 {
 
 /// A light weight seed generator.
 /// This is a stripped down version of an Rng.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct SeedGenerator {
     seed: White32,
     entropy: u32,
