@@ -7,6 +7,7 @@ pub mod adapters;
 pub mod cellular;
 pub mod common_mapping;
 pub mod curves;
+pub mod gradient;
 pub mod grid;
 pub mod norm;
 pub mod periodic;

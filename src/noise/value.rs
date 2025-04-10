@@ -15,13 +15,13 @@ use super::{
     white::SeedGenerator,
 };
 
-/// Represents some noise on the [`PeriodicPoint`] of a [`PeriodicSegment`] where values between those points are smoothed out accordingly.
+/// Represents some noise on the [`PeriodicPoint`]s of a [`PeriodicSegment`] where values between those points are smoothed out accordingly.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct SegmentalValueNoise<N, C> {
     /// The noise for each of the [`PeriodicPoint`]s.
     pub noise: N,
     /// The curve to interpolate by.
-    /// This must be valid for domain 0..=1.
+    /// For items in domain 0..=1, this must produce results in 0..=1.
     pub smoothing_curve: C,
     /// The seed for the noise.
     pub seed: u32,
