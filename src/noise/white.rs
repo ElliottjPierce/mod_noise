@@ -100,7 +100,7 @@ impl_white!(
 impl_white!(
     u32,
     White32,
-    104_395_303,
+    104_395_397,
     (UVec2, [u32; 2]),
     (UVec3, [u32; 3]),
     (UVec4, [u32; 4]),
