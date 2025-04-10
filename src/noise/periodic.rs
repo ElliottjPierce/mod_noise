@@ -9,7 +9,7 @@ pub trait ScalableNoise<T>: Noise {
     /// Gets the scale of the noise.
     fn get_scale(&self) -> T;
     /// Sets the scale of the noise.
-    fn set_scale(&mut self, period: T);
+    fn set_scale(&mut self, scale: T);
 }
 
 /// Represents a segment of a noise result.
