@@ -215,8 +215,8 @@ impl<T: GradElementGenerator + Noise> GradientGenerator<Vec2> for T {
     #[inline]
     fn get_gradient(&self, seed: u32) -> Vec2 {
         Vec2::new(
-            self.get_element(seed as u8),
-            self.get_element((seed >> 8) as u8),
+            self.get_element((seed >> 24) as u8),
+            self.get_element((seed >> 16) as u8),
         )
     }
 }
@@ -230,9 +230,9 @@ impl<T: GradElementGenerator + Noise> GradientGenerator<Vec3> for T {
     #[inline]
     fn get_gradient(&self, seed: u32) -> Vec3 {
         Vec3::new(
-            self.get_element(seed as u8),
-            self.get_element((seed >> 8) as u8),
+            self.get_element((seed >> 24) as u8),
             self.get_element((seed >> 16) as u8),
+            self.get_element((seed >> 8) as u8),
         )
     }
 }
@@ -246,9 +246,9 @@ impl<T: GradElementGenerator + Noise> GradientGenerator<Vec3A> for T {
     #[inline]
     fn get_gradient(&self, seed: u32) -> Vec3A {
         Vec3A::new(
-            self.get_element(seed as u8),
-            self.get_element((seed >> 8) as u8),
+            self.get_element((seed >> 24) as u8),
             self.get_element((seed >> 16) as u8),
+            self.get_element((seed >> 8) as u8),
         )
     }
 }
@@ -262,10 +262,10 @@ impl<T: GradElementGenerator + Noise> GradientGenerator<Vec4> for T {
     #[inline]
     fn get_gradient(&self, seed: u32) -> Vec4 {
         Vec4::new(
-            self.get_element(seed as u8),
-            self.get_element((seed >> 8) as u8),
-            self.get_element((seed >> 16) as u8),
             self.get_element((seed >> 24) as u8),
+            self.get_element((seed >> 16) as u8),
+            self.get_element((seed >> 8) as u8),
+            self.get_element(seed as u8),
         )
     }
 }
