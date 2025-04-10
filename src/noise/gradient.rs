@@ -199,14 +199,14 @@ impl GradientGenerator<Vec4> for RuntimeRand {
 }
 
 /// Allows making a [`GradientGenerator`] by specifying how it's parts are made.
-pub trait GradElementTable {
+pub trait GradElementGenerator {
     /// Gets an element of a gradient in ±1 from this seed.
     fn get_element(&self, seed: u8) -> f32;
 }
 
 impl Noise for GradTableQuick {}
 
-impl<T: GradElementTable + Noise> GradientGenerator<Vec2> for T {
+impl<T: GradElementGenerator + Noise> GradientGenerator<Vec2> for T {
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec2) -> f32 {
         GradientGenerator::<Vec2>::get_gradient(self, seed).dot(offset)
@@ -221,7 +221,7 @@ impl<T: GradElementTable + Noise> GradientGenerator<Vec2> for T {
     }
 }
 
-impl<T: GradElementTable + Noise> GradientGenerator<Vec3> for T {
+impl<T: GradElementGenerator + Noise> GradientGenerator<Vec3> for T {
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec3) -> f32 {
         GradientGenerator::<Vec3>::get_gradient(self, seed).dot(offset)
@@ -237,7 +237,7 @@ impl<T: GradElementTable + Noise> GradientGenerator<Vec3> for T {
     }
 }
 
-impl<T: GradElementTable + Noise> GradientGenerator<Vec3A> for T {
+impl<T: GradElementGenerator + Noise> GradientGenerator<Vec3A> for T {
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec3A) -> f32 {
         GradientGenerator::<Vec3A>::get_gradient(self, seed).dot(offset)
@@ -253,7 +253,7 @@ impl<T: GradElementTable + Noise> GradientGenerator<Vec3A> for T {
     }
 }
 
-impl<T: GradElementTable + Noise> GradientGenerator<Vec4> for T {
+impl<T: GradElementGenerator + Noise> GradientGenerator<Vec4> for T {
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec4) -> f32 {
         GradientGenerator::<Vec4>::get_gradient(self, seed).dot(offset)
@@ -274,7 +274,7 @@ impl<T: GradElementTable + Noise> GradientGenerator<Vec4> for T {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct GradTableQuick;
 
-impl GradElementTable for GradTableQuick {
+impl GradElementGenerator for GradTableQuick {
     #[inline]
     fn get_element(&self, seed: u8) -> f32 {
         // as i8 as a nop, and as f32 is probably faster than a array lookup or jump table.
