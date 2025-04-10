@@ -201,7 +201,7 @@ impl<I, T: NoiseValue + CorolatedNoiseType<I> + AddAssign<T> + Mul<f32, Output =
     }
 }
 
-/// A standard [`LayerScale`] that purely normalizes the result to what it is meant to be.
+/// A standard [`LayerScale`] that makes each octave a fraction of the scale of the first.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FractalScaling {
     /// The lowest frequency, the frequency of the first octave.
@@ -285,5 +285,33 @@ impl LayerScale<WholePeriod> for FractalScaling {
     #[inline]
     fn multiply_scale(&mut self, multiplier: WholePeriod) {
         LayerScale::<Frequency>::multiply_scale(self, multiplier.into());
+    }
+}
+
+/// A standard [`LayerAmplitude`] that makes each octave have an amplitude proportional to the last.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ProportionalAmplitude {
+    /// The amplitude of the first octave
+    pub base: f32,
+    /// The multiple for octaves.
+    pub proportion: f32,
+}
+
+impl LayerAmplitude for ProportionalAmplitude {
+    #[inline]
+    fn get_next_amplitude(&mut self) -> f32 {
+        let res = self.base;
+        self.base *= self.proportion;
+        res
+    }
+
+    #[inline]
+    fn set_next_amplitude(&mut self, amplitude: f32) {
+        self.base = amplitude;
+    }
+
+    #[inline]
+    fn multiply_amplitude(&mut self, multiplier: f32) {
+        self.base *= multiplier;
     }
 }
