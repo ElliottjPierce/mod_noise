@@ -128,13 +128,15 @@ impl<
     }
 }
 
-/// A simple perlin noise source from uniquely random values.
+/// A simple [`GradientGenerator`] that uses white noise to generate each element of the gradient independently.
+///
+/// This does not correct for the bunching of directions caused by normalizing.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub struct RandomBunchedGrads;
+pub struct RandomElementGradients;
 
-impl Noise for RandomBunchedGrads {}
+impl Noise for RandomElementGradients {}
 
-impl GradientGenerator<Vec2> for RandomBunchedGrads {
+impl GradientGenerator<Vec2> for RandomElementGradients {
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec2) -> f32 {
         GradientGenerator::<Vec2>::get_gradient(self, seed).dot(offset)
@@ -149,7 +151,7 @@ impl GradientGenerator<Vec2> for RandomBunchedGrads {
     }
 }
 
-impl GradientGenerator<Vec3> for RandomBunchedGrads {
+impl GradientGenerator<Vec3> for RandomElementGradients {
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec3) -> f32 {
         GradientGenerator::<Vec3>::get_gradient(self, seed).dot(offset)
@@ -165,7 +167,7 @@ impl GradientGenerator<Vec3> for RandomBunchedGrads {
     }
 }
 
-impl GradientGenerator<Vec3A> for RandomBunchedGrads {
+impl GradientGenerator<Vec3A> for RandomElementGradients {
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec3A) -> f32 {
         GradientGenerator::<Vec3A>::get_gradient(self, seed).dot(offset)
@@ -181,7 +183,7 @@ impl GradientGenerator<Vec3A> for RandomBunchedGrads {
     }
 }
 
-impl GradientGenerator<Vec4> for RandomBunchedGrads {
+impl GradientGenerator<Vec4> for RandomElementGradients {
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec4) -> f32 {
         GradientGenerator::<Vec4>::get_gradient(self, seed).dot(offset)
@@ -203,8 +205,6 @@ pub trait GradElementGenerator {
     /// Gets an element of a gradient in ±1 from this seed.
     fn get_element(&self, seed: u8) -> f32;
 }
-
-impl Noise for FastBunchedGrads {}
 
 impl<T: GradElementGenerator + Noise> GradientGenerator<Vec2> for T {
     #[inline]
@@ -270,11 +270,16 @@ impl<T: GradElementGenerator + Noise> GradientGenerator<Vec4> for T {
     }
 }
 
-/// A simple perlin noise source that uses vectors with elemental values of only -1, 0, or 1.
+/// A simple [`GradientGenerator`] that maps seeds directly to gradient vectors.
+/// This is the fastest provided [`GradientGenerator`].
+///
+/// This does not correct for the bunching of directions caused by normalizing.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct FastBunchedGrads;
+pub struct QuickGradients;
 
-impl GradElementGenerator for FastBunchedGrads {
+impl Noise for QuickGradients {}
+
+impl GradElementGenerator for QuickGradients {
     #[inline]
     fn get_element(&self, seed: u8) -> f32 {
         // as i8 as a nop, and as f32 is probably faster than a array lookup or jump table.
@@ -282,13 +287,18 @@ impl GradElementGenerator for FastBunchedGrads {
     }
 }
 
-/// A simple perlin noise source that uses vectors with elemental values of only -1, 0, or 1.
+/// A simple [`GradientGenerator`] that maps seeds directly to gradient vectors.
+/// This is very similar to [`QuickGradients`].
+///
+/// This approximately corrects for the bunching of directions caused by normalizing.
+/// To do so, it maps it's distribution of points onto a cubic curve that distributes more values near ±0.5.
+/// That reduces the directional artifacts caused by higher densities of gradients in corners which are mapped to similar directions.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct FastGrads;
+pub struct ApproximateUniformGradients;
 
-impl Noise for FastGrads {}
+impl Noise for ApproximateUniformGradients {}
 
-impl GradElementGenerator for FastGrads {
+impl GradElementGenerator for ApproximateUniformGradients {
     #[inline]
     fn get_element(&self, seed: u8) -> f32 {
         // try to bunch more values around ±0.5 so that there is less directional bunching.

@@ -10,7 +10,9 @@ use mod_noise::noise::{
     adapters::Adapter,
     cellular::CellNoise,
     curves::{Linear, Smoothstep},
-    gradient::{FastBunchedGrads, FastGrads, RandomBunchedGrads, SegmentalGradientNoise},
+    gradient::{
+        ApproximateUniformGradients, QuickGradients, RandomElementGradients, SegmentalGradientNoise,
+    },
     grid::OrthoGrid,
     norm::UNorm,
     periodic::{Frequency, Period, TilingNoise},
@@ -104,30 +106,30 @@ fn main() -> AppExit {
                             >::default()),
                         },
                         NoiseOption {
-                            name: "RandomBunchedGrads perlin noise",
+                            name: "Random Element Gradients perlin noise",
                             frequency: Period(32.0).into(),
                             seed: 0,
                             noise: Box::new(TilingNoise::<
                                 OrthoGrid,
-                                SegmentalGradientNoise<RandomBunchedGrads, Smoothstep>,
+                                SegmentalGradientNoise<RandomElementGradients, Smoothstep>,
                             >::default()),
                         },
                         NoiseOption {
-                            name: "FastBunchedGrads perlin noise",
+                            name: "Quick Gradients perlin noise",
                             frequency: Period(32.0).into(),
                             seed: 0,
                             noise: Box::new(TilingNoise::<
                                 OrthoGrid,
-                                SegmentalGradientNoise<FastBunchedGrads, Smoothstep>,
+                                SegmentalGradientNoise<QuickGradients, Smoothstep>,
                             >::default()),
                         },
                         NoiseOption {
-                            name: "FastGrads perlin noise",
+                            name: "Approximate Uniform Gradients perlin noise",
                             frequency: Period(32.0).into(),
                             seed: 0,
                             noise: Box::new(TilingNoise::<
                                 OrthoGrid,
-                                SegmentalGradientNoise<FastGrads, Smoothstep>,
+                                SegmentalGradientNoise<ApproximateUniformGradients, Smoothstep>,
                             >::default()),
                         },
                     ],
