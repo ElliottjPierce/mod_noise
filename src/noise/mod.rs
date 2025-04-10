@@ -9,6 +9,7 @@ pub mod common_mapping;
 pub mod curves;
 pub mod gradient;
 pub mod grid;
+pub mod layering;
 pub mod norm;
 pub mod periodic;
 pub mod value;
