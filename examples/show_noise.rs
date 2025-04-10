@@ -151,7 +151,11 @@ fn update_system(
         changed = true;
     }
     if input.just_pressed(KeyCode::ArrowLeft) {
-        noise.selected = (noise.selected.wrapping_sub(1)) % noise.options.len();
+        noise.selected = noise
+            .selected
+            .checked_sub(1)
+            .map(|v| v % noise.options.len())
+            .unwrap_or(noise.options.len() - 1);
         changed = true;
     }
 
