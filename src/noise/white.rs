@@ -84,7 +84,7 @@ macro_rules! impl_white {
 impl_white!(
     u8,
     White8,
-    97,
+    69,
     (U8Vec2, [u8; 2]),
     (U8Vec3, [u8; 3]),
     (U8Vec4, [u8; 4]),
@@ -92,7 +92,7 @@ impl_white!(
 impl_white!(
     u16,
     White16,
-    1777,
+    1779,
     (U16Vec2, [u16; 2]),
     (U16Vec3, [u16; 3]),
     (U16Vec4, [u16; 4]),
@@ -100,7 +100,7 @@ impl_white!(
 impl_white!(
     u32,
     White32,
-    104_395_397,
+    104_395_403,
     (UVec2, [u32; 2]),
     (UVec3, [u32; 3]),
     (UVec4, [u32; 4]),
