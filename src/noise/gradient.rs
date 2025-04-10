@@ -142,11 +142,10 @@ impl GradientGenerator<Vec2> for RuntimeRand {
 
     #[inline]
     fn get_gradient(&self, seed: u32) -> Vec2 {
-        let vec = Vec2::new(
+        Vec2::new(
             White32(seed).raw_sample(0).map_to::<UNorm>().get() * 2.0 - 1.0,
             White32(seed).raw_sample(1).map_to::<UNorm>().get() * 2.0 - 1.0,
-        ) * 128.0; // extra multiplication prevenst len from being Nan because of an approx zero length.
-        vec.normalize()
+        )
     }
 }
 
@@ -158,12 +157,11 @@ impl GradientGenerator<Vec3> for RuntimeRand {
 
     #[inline]
     fn get_gradient(&self, seed: u32) -> Vec3 {
-        let vec = Vec3::new(
+        Vec3::new(
             White32(seed).raw_sample(0).map_to::<UNorm>().get() * 2.0 - 1.0,
             White32(seed).raw_sample(1).map_to::<UNorm>().get() * 2.0 - 1.0,
             White32(seed).raw_sample(2).map_to::<UNorm>().get() * 2.0 - 1.0,
-        ) * 128.0; // extra multiplication prevenst len from being Nan because of an approx zero length.
-        vec.normalize()
+        )
     }
 }
 
@@ -175,12 +173,11 @@ impl GradientGenerator<Vec3A> for RuntimeRand {
 
     #[inline]
     fn get_gradient(&self, seed: u32) -> Vec3A {
-        let vec = Vec3A::new(
+        Vec3A::new(
             White32(seed).raw_sample(0).map_to::<UNorm>().get() * 2.0 - 1.0,
             White32(seed).raw_sample(1).map_to::<UNorm>().get() * 2.0 - 1.0,
             White32(seed).raw_sample(2).map_to::<UNorm>().get() * 2.0 - 1.0,
-        ) * 128.0; // extra multiplication prevenst len from being Nan because of an approx zero length.
-        vec.normalize()
+        )
     }
 }
 
@@ -192,13 +189,12 @@ impl GradientGenerator<Vec4> for RuntimeRand {
 
     #[inline]
     fn get_gradient(&self, seed: u32) -> Vec4 {
-        let vec = Vec4::new(
+        Vec4::new(
             White32(seed).raw_sample(0).map_to::<UNorm>().get() * 2.0 - 1.0,
             White32(seed).raw_sample(1).map_to::<UNorm>().get() * 2.0 - 1.0,
             White32(seed).raw_sample(2).map_to::<UNorm>().get() * 2.0 - 1.0,
             White32(seed).raw_sample(3).map_to::<UNorm>().get() * 2.0 - 1.0,
-        ) * 128.0; // extra multiplication prevenst len from being Nan because of an approx zero length.
-        vec.normalize()
+        )
     }
 }
 
