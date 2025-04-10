@@ -7,7 +7,6 @@ use core::{
 
 use super::{
     CorolatedNoiseType, DirectNoise, Noise, NoiseValue,
-    norm::UNorm,
     periodic::{Frequency, Period, ScalableNoise, WholePeriod},
     white::SeedGenerator,
 };
@@ -108,7 +107,7 @@ impl_layers!(T0 = 0, T1 = 1, T2 = 2, T3 = 3, T4 = 4, T5 = 5, T6 = 6, T7 = 7, T8 
 /// A [`Noise`] that operates by composing the [`NoiseLayer`]s of `L` together into some [`LayerResult`] `R`, producing a fractal appearance.
 /// `S` denotes the [`LayerScale`] and `A` denotes the [`LayerAmplitude`].
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct FractalNoise<R, S, A, L> {
+pub struct FractalNoise<F, R, S, A, L> {
     /// The scale, which defines the scale of each octave and its progression.
     /// The values of this will determine the starting point for each sample.
     ///
@@ -122,24 +121,27 @@ pub struct FractalNoise<R, S, A, L> {
     /// The result of the noise. This is not the literal result but rather the starting point for its accumulation.
     /// For example, modifying this can "pre-load" some octave's results before a sample starts.
     pub result: R,
+    /// Describes the final operation on the result from `R`.
+    pub finalizer: F,
+    /// The seed for [`FractalNoise`].
+    pub seed: SeedGenerator,
     /// These are the layers/octaves of the [`FractalNoise`].
     /// They are composed together into the result.
     pub octaves: L,
-    /// The seed for [`FractalNoise`].
-    pub seed: SeedGenerator,
 }
 
-impl<R, S, A, L> Noise for FractalNoise<R, S, A, L>
+impl<F: Noise, R, S, A, L> Noise for FractalNoise<F, R, S, A, L>
 where
     Self: Send + Sync,
 {
     #[inline]
     fn set_seed(&mut self, seed: &mut SeedGenerator) {
         self.seed = seed.branch();
+        self.finalizer.set_seed(seed);
     }
 }
 
-impl<T, R, S: LayerScale<T>, A, L> ScalableNoise<T> for FractalNoise<R, S, A, L>
+impl<T, F, R, S: LayerScale<T>, A, L> ScalableNoise<T> for FractalNoise<F, R, S, A, L>
 where
     Self: Noise,
 {
@@ -154,12 +156,18 @@ where
     }
 }
 
-impl<I, R: LayerResult + Clone, S: Clone, A: LayerAmplitude + Clone, L: NoiseLayer<I, S, R>>
-    DirectNoise<I> for FractalNoise<R, S, A, L>
+impl<
+    I,
+    F: DirectNoise<R::Result>,
+    R: LayerResult + Clone,
+    S: Clone,
+    A: LayerAmplitude + Clone,
+    L: NoiseLayer<I, S, R>,
+> DirectNoise<I> for FractalNoise<F, R, S, A, L>
 where
     Self: Noise,
 {
-    type Output = R::Result;
+    type Output = F::Output;
 
     #[inline]
     fn raw_sample(&self, mut input: I) -> Self::Output {
@@ -171,13 +179,13 @@ where
             &mut self.amplitude.clone(),
             &mut result,
         );
-        result.finish()
+        self.finalizer.raw_sample(result.finish())
     }
 }
 
 /// A standard [`LayerResult`] that just normalizes the result to be a direct result of the accumulated values and amplitudes.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct NormalizeOctavesInto<T: NoiseValue> {
+pub struct NormalizeOctavesInto<T> {
     /// The sum of all accumulated values.
     pub base: T,
     /// The total of all accumulated amplitudes.
@@ -210,7 +218,7 @@ pub struct FractalScaling {
     /// The lowest frequency, the frequency of the first octave.
     pub overall: Frequency,
     /// Each octave's frequency is multiplied by this value.
-    pub gain: UNorm,
+    pub gain: f32,
 }
 
 impl Default for FractalScaling {
@@ -218,7 +226,7 @@ impl Default for FractalScaling {
     fn default() -> Self {
         Self {
             overall: Frequency::default(),
-            gain: UNorm::new_unchecked(0.5),
+            gain: 2.0,
         }
     }
 }
@@ -227,7 +235,7 @@ impl LayerScale<Frequency> for FractalScaling {
     #[inline]
     fn get_next_scale(&mut self) -> Frequency {
         let res = self.overall;
-        self.overall.0 *= self.gain.get();
+        self.overall.0 *= self.gain;
         res
     }
 
@@ -331,20 +339,32 @@ impl LayerAmplitude for ProportionalAmplitude {
 
 /// Represents a direct octave of `N` noise via scale `S` and source `F`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Octave<N, S, F: Fn(&mut S, &mut SeedGenerator) -> N> {
+pub struct Octave<N, S, F: Fn(&mut SeedGenerator) -> N> {
     /// The means by which `N` is created for each octave.
     pub generator: F,
-    /// Marker data. `S` specifies the scale to use, and `N` specifies the expected [`Noise`] type.
+    /// Marker data. `N` specifies the expected [`Noise`] type, and `S` specifies the scale to use on it.
     pub marker: PhantomData<(N, S)>,
+}
+
+impl<N, S, F: Fn(&mut SeedGenerator) -> N> Octave<N, S, F> {
+    /// Creates a new [`Octave`] with the given generator.
+    #[inline]
+    pub fn new(generator: F) -> Self {
+        Self {
+            generator,
+            marker: PhantomData,
+        }
+    }
 }
 
 impl<
     I: Copy,
-    N: DirectNoise<I>,
+    NS,
+    N: DirectNoise<I> + ScalableNoise<NS>,
     R: LayerAccumulator<N::Output>,
-    S,
-    F: Fn(&mut S, &mut SeedGenerator) -> N,
-> NoiseLayer<I, S, R> for Octave<N, S, F>
+    S: LayerScale<NS>,
+    F: Fn(&mut SeedGenerator) -> N,
+> NoiseLayer<I, S, R> for Octave<N, NS, F>
 where
     Self: Send + Sync,
 {
@@ -357,7 +377,8 @@ where
         amplitude: &mut impl LayerAmplitude,
         output: &mut R,
     ) {
-        let noise = (self.generator)(scale, seed);
+        let mut noise = (self.generator)(seed);
+        noise.set_scale(scale.get_next_scale());
         let octave_result = noise.raw_sample(*input);
         let amplitude = amplitude.get_next_amplitude();
         output.accumulate(octave_result, amplitude);
@@ -371,6 +392,17 @@ pub struct Repeat<L> {
     pub layer: L,
     /// The number of times to repeat it.
     pub repetitions: u32,
+}
+
+impl<L> Repeat<L> {
+    /// Constructs a new [`Repeat`].
+    #[inline]
+    pub fn new(times: u32, layer: L) -> Self {
+        Self {
+            layer,
+            repetitions: times,
+        }
+    }
 }
 
 impl<I, S, R, L: NoiseLayer<I, S, R>> NoiseLayer<I, S, R> for Repeat<L>
