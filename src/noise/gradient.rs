@@ -1,9 +1,9 @@
 //! Contains logic for all kinds of gradient noise.
 
-use core::{hint::unreachable_unchecked, ops::Add};
+use core::ops::Add;
 
 use bevy_math::{
-    Curve, Vec2, Vec3, Vec4,
+    Curve, Vec2, Vec3, Vec3A, Vec4,
     curve::{Ease, derivatives::SampleDerivative},
 };
 
@@ -28,10 +28,7 @@ pub trait GradientGenerator<I: NoiseValue>: Noise {
     /// Gets the dot product of `I` with some gradient vector based on this seed.
     /// Each element of `offset` can be assumed to be in -1..=1.
     fn get_gradient_dot(&self, seed: u32, offset: I) -> f32;
-}
 
-/// Allows accessing the gradients used in [`GradientGenerator`].
-pub trait DifferentiableGradientGenerator<I: NoiseValue>: GradientGenerator<I> {
     /// Gets the gradient that would be used in [`get_gradient_dot`](GradientGenerator::get_gradient_dot).
     fn get_gradient(&self, seed: u32) -> I;
 }
@@ -96,7 +93,7 @@ impl<
                       + From<<T::Points as DiferentiablePeriodicPoints>::Gradient<f32>>
                       + Ease,
     >,
-    G: DifferentiableGradientGenerator<P::Relative>,
+    G: GradientGenerator<P::Relative>,
     C: SampleDerivative<f32> + Send + Sync,
 > GradientNoise<T> for SegmentalGradientNoise<G, C>
 {
@@ -140,118 +137,151 @@ impl Noise for RuntimeRand {}
 impl GradientGenerator<Vec2> for RuntimeRand {
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec2) -> f32 {
+        GradientGenerator::<Vec2>::get_gradient(self, seed).dot(offset)
+    }
+
+    #[inline]
+    fn get_gradient(&self, seed: u32) -> Vec2 {
         let vec = Vec2::new(
             White32(seed).raw_sample(0).map_to::<UNorm>().get() * 2.0 - 1.0,
             White32(seed).raw_sample(1).map_to::<UNorm>().get() * 2.0 - 1.0,
         ) * 128.0; // extra multiplication prevenst len from being Nan because of an approx zero length.
-        vec.normalize().dot(offset)
+        vec.normalize()
     }
 }
 
 impl GradientGenerator<Vec3> for RuntimeRand {
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec3) -> f32 {
+        GradientGenerator::<Vec3>::get_gradient(self, seed).dot(offset)
+    }
+
+    #[inline]
+    fn get_gradient(&self, seed: u32) -> Vec3 {
         let vec = Vec3::new(
             White32(seed).raw_sample(0).map_to::<UNorm>().get() * 2.0 - 1.0,
             White32(seed).raw_sample(1).map_to::<UNorm>().get() * 2.0 - 1.0,
             White32(seed).raw_sample(2).map_to::<UNorm>().get() * 2.0 - 1.0,
         ) * 128.0; // extra multiplication prevenst len from being Nan because of an approx zero length.
-        vec.normalize().dot(offset)
+        vec.normalize()
+    }
+}
+
+impl GradientGenerator<Vec3A> for RuntimeRand {
+    #[inline]
+    fn get_gradient_dot(&self, seed: u32, offset: Vec3A) -> f32 {
+        GradientGenerator::<Vec3A>::get_gradient(self, seed).dot(offset)
+    }
+
+    #[inline]
+    fn get_gradient(&self, seed: u32) -> Vec3A {
+        let vec = Vec3A::new(
+            White32(seed).raw_sample(0).map_to::<UNorm>().get() * 2.0 - 1.0,
+            White32(seed).raw_sample(1).map_to::<UNorm>().get() * 2.0 - 1.0,
+            White32(seed).raw_sample(2).map_to::<UNorm>().get() * 2.0 - 1.0,
+        ) * 128.0; // extra multiplication prevenst len from being Nan because of an approx zero length.
+        vec.normalize()
     }
 }
 
 impl GradientGenerator<Vec4> for RuntimeRand {
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec4) -> f32 {
+        GradientGenerator::<Vec4>::get_gradient(self, seed).dot(offset)
+    }
+
+    #[inline]
+    fn get_gradient(&self, seed: u32) -> Vec4 {
         let vec = Vec4::new(
             White32(seed).raw_sample(0).map_to::<UNorm>().get() * 2.0 - 1.0,
             White32(seed).raw_sample(1).map_to::<UNorm>().get() * 2.0 - 1.0,
             White32(seed).raw_sample(2).map_to::<UNorm>().get() * 2.0 - 1.0,
             White32(seed).raw_sample(3).map_to::<UNorm>().get() * 2.0 - 1.0,
         ) * 128.0; // extra multiplication prevenst len from being Nan because of an approx zero length.
-        vec.normalize().dot(offset)
+        vec.normalize()
+    }
+}
+
+/// Allows making a [`GradientGenerator`] by specifying how it's parts are made.
+pub trait GradElementTable {
+    /// Gets an element of a gradient in ±1 from this seed.
+    fn get_element(&self, seed: u8) -> f32;
+}
+
+impl Noise for GradTableQuick {}
+
+impl<T: GradElementTable + Noise> GradientGenerator<Vec2> for T {
+    #[inline]
+    fn get_gradient_dot(&self, seed: u32, offset: Vec2) -> f32 {
+        GradientGenerator::<Vec2>::get_gradient(self, seed).dot(offset)
+    }
+
+    #[inline]
+    fn get_gradient(&self, seed: u32) -> Vec2 {
+        Vec2::new(
+            self.get_element((seed >> 24) as u8),
+            self.get_element((seed >> 16) as u8),
+        )
+    }
+}
+
+impl<T: GradElementTable + Noise> GradientGenerator<Vec3> for T {
+    #[inline]
+    fn get_gradient_dot(&self, seed: u32, offset: Vec3) -> f32 {
+        GradientGenerator::<Vec3>::get_gradient(self, seed).dot(offset)
+    }
+
+    #[inline]
+    fn get_gradient(&self, seed: u32) -> Vec3 {
+        Vec3::new(
+            self.get_element((seed >> 24) as u8),
+            self.get_element((seed >> 16) as u8),
+            self.get_element((seed >> 8) as u8),
+        )
+    }
+}
+
+impl<T: GradElementTable + Noise> GradientGenerator<Vec3A> for T {
+    #[inline]
+    fn get_gradient_dot(&self, seed: u32, offset: Vec3A) -> f32 {
+        GradientGenerator::<Vec3A>::get_gradient(self, seed).dot(offset)
+    }
+
+    #[inline]
+    fn get_gradient(&self, seed: u32) -> Vec3A {
+        Vec3A::new(
+            self.get_element((seed >> 24) as u8),
+            self.get_element((seed >> 16) as u8),
+            self.get_element((seed >> 8) as u8),
+        )
+    }
+}
+
+impl<T: GradElementTable + Noise> GradientGenerator<Vec4> for T {
+    #[inline]
+    fn get_gradient_dot(&self, seed: u32, offset: Vec4) -> f32 {
+        GradientGenerator::<Vec4>::get_gradient(self, seed).dot(offset)
+    }
+
+    #[inline]
+    fn get_gradient(&self, seed: u32) -> Vec4 {
+        Vec4::new(
+            self.get_element((seed >> 24) as u8),
+            self.get_element((seed >> 16) as u8),
+            self.get_element((seed >> 8) as u8),
+            self.get_element(seed as u8),
+        )
     }
 }
 
 /// A simple perlin noise source that uses vectors with elemental values of only -1, 0, or 1.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct Hashed;
+pub struct GradTableQuick;
 
-impl Noise for Hashed {}
-
-impl GradientGenerator<Vec2> for Hashed {
+impl GradElementTable for GradTableQuick {
     #[inline]
-    fn get_gradient_dot(&self, seed: u32, offset: Vec2) -> f32 {
-        let v = offset;
-        match seed >> 29 {
-            0 => v.x + v.y,
-            1 => v.x - v.y,
-            2 => -v.x + v.y,
-            3 => -v.x - v.y,
-            4 => v.x,
-            5 => -v.x,
-            6 => v.y,
-            7 => -v.y,
-            // SAFETY: We did >> 29 above, so there is no way for the value to be > 7.
-            _ => unsafe { unreachable_unchecked() },
-        }
-    }
-}
-
-impl GradientGenerator<Vec3> for Hashed {
-    #[inline]
-    fn get_gradient_dot(&self, seed: u32, offset: Vec3) -> f32 {
-        let mut result = 0.0;
-        if seed & 1 > 0 {
-            result += offset.x;
-        }
-        if seed & 2 > 0 {
-            result -= offset.x;
-        }
-        if seed & 4 > 0 {
-            result += offset.y;
-        }
-        if seed & 8 > 0 {
-            result -= offset.y;
-        }
-        if seed & 16 > 0 {
-            result += offset.z;
-        }
-        if seed & 32 > 0 {
-            result -= offset.z;
-        }
-        result
-    }
-}
-
-impl GradientGenerator<Vec4> for Hashed {
-    #[inline]
-    fn get_gradient_dot(&self, seed: u32, offset: Vec4) -> f32 {
-        let mut result = 0.0;
-        if seed & 1 > 0 {
-            result += offset.x;
-        }
-        if seed & 2 > 0 {
-            result -= offset.x;
-        }
-        if seed & 4 > 0 {
-            result += offset.y;
-        }
-        if seed & 8 > 0 {
-            result -= offset.y;
-        }
-        if seed & 16 > 0 {
-            result += offset.z;
-        }
-        if seed & 32 > 0 {
-            result -= offset.z;
-        }
-        if seed & 64 > 0 {
-            result += offset.w;
-        }
-        if seed & 128 > 0 {
-            result -= offset.w;
-        }
-        result
+    fn get_element(&self, seed: u8) -> f32 {
+        // as i8 as a nop, and as f32 is probably faster than a array lookup or jump table.
+        (seed as i8) as f32 * (1.0 / 128.0)
     }
 }
