@@ -143,8 +143,8 @@ impl GradientGenerator<Vec2> for RuntimeRand {
     #[inline]
     fn get_gradient(&self, seed: u32) -> Vec2 {
         Vec2::new(
-            White32(seed).raw_sample(0).map_to::<UNorm>().get() * 2.0 - 1.0,
-            White32(seed).raw_sample(1).map_to::<UNorm>().get() * 2.0 - 1.0,
+            White32(seed).raw_sample(983475).map_to::<UNorm>().get() * 2.0 - 1.0,
+            White32(seed).raw_sample(2983754).map_to::<UNorm>().get() * 2.0 - 1.0,
         )
     }
 }
@@ -158,9 +158,9 @@ impl GradientGenerator<Vec3> for RuntimeRand {
     #[inline]
     fn get_gradient(&self, seed: u32) -> Vec3 {
         Vec3::new(
-            White32(seed).raw_sample(0).map_to::<UNorm>().get() * 2.0 - 1.0,
-            White32(seed).raw_sample(1).map_to::<UNorm>().get() * 2.0 - 1.0,
-            White32(seed).raw_sample(2).map_to::<UNorm>().get() * 2.0 - 1.0,
+            White32(seed).raw_sample(983475).map_to::<UNorm>().get() * 2.0 - 1.0,
+            White32(seed).raw_sample(2983754).map_to::<UNorm>().get() * 2.0 - 1.0,
+            White32(seed).raw_sample(823732).map_to::<UNorm>().get() * 2.0 - 1.0,
         )
     }
 }
@@ -174,9 +174,9 @@ impl GradientGenerator<Vec3A> for RuntimeRand {
     #[inline]
     fn get_gradient(&self, seed: u32) -> Vec3A {
         Vec3A::new(
-            White32(seed).raw_sample(0).map_to::<UNorm>().get() * 2.0 - 1.0,
-            White32(seed).raw_sample(1).map_to::<UNorm>().get() * 2.0 - 1.0,
-            White32(seed).raw_sample(2).map_to::<UNorm>().get() * 2.0 - 1.0,
+            White32(seed).raw_sample(983475).map_to::<UNorm>().get() * 2.0 - 1.0,
+            White32(seed).raw_sample(2983754).map_to::<UNorm>().get() * 2.0 - 1.0,
+            White32(seed).raw_sample(823732).map_to::<UNorm>().get() * 2.0 - 1.0,
         )
     }
 }
@@ -190,10 +190,10 @@ impl GradientGenerator<Vec4> for RuntimeRand {
     #[inline]
     fn get_gradient(&self, seed: u32) -> Vec4 {
         Vec4::new(
-            White32(seed).raw_sample(0).map_to::<UNorm>().get() * 2.0 - 1.0,
-            White32(seed).raw_sample(1).map_to::<UNorm>().get() * 2.0 - 1.0,
-            White32(seed).raw_sample(2).map_to::<UNorm>().get() * 2.0 - 1.0,
-            White32(seed).raw_sample(3).map_to::<UNorm>().get() * 2.0 - 1.0,
+            White32(seed).raw_sample(983475).map_to::<UNorm>().get() * 2.0 - 1.0,
+            White32(seed).raw_sample(2983754).map_to::<UNorm>().get() * 2.0 - 1.0,
+            White32(seed).raw_sample(823732).map_to::<UNorm>().get() * 2.0 - 1.0,
+            White32(seed).raw_sample(208375).map_to::<UNorm>().get() * 2.0 - 1.0,
         )
     }
 }
