@@ -1,6 +1,9 @@
 //! Contains systems for layering noise ontop of eachother.
 
-use core::ops::{AddAssign, Mul};
+use core::{
+    marker::PhantomData,
+    ops::{AddAssign, Mul},
+};
 
 use super::{
     CorolatedNoiseType, DirectNoise, Noise, NoiseValue,
@@ -21,7 +24,7 @@ pub trait LayerResult: Send + Sync {
 /// Represents the ability of a [`LayerResult`] to accumulate values of `T`.
 pub trait LayerAccumulator<T>: LayerResult {
     /// Adds this `unit_value` at this `amplitude` to the result.
-    fn accumulate(&mut self, unit_value: T, amplatude: f32);
+    fn accumulate(&mut self, unit_value: T, amplitude: f32);
 }
 
 /// A generator that specifies amplitude for a seriese of [`NoiseLayer`]s.
@@ -297,6 +300,16 @@ pub struct ProportionalAmplitude {
     pub proportion: f32,
 }
 
+impl Default for ProportionalAmplitude {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            base: 1000.0,
+            proportion: 0.5,
+        }
+    }
+}
+
 impl LayerAmplitude for ProportionalAmplitude {
     #[inline]
     fn get_next_amplitude(&mut self) -> f32 {
@@ -313,5 +326,69 @@ impl LayerAmplitude for ProportionalAmplitude {
     #[inline]
     fn multiply_amplitude(&mut self, multiplier: f32) {
         self.base *= multiplier;
+    }
+}
+
+/// Represents a direct octave of `N` noise via scale `S` and source `F`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Octave<N, S, F: Fn(&mut S, &mut SeedGenerator) -> N> {
+    /// The means by which `N` is created for each octave.
+    pub generator: F,
+    /// Marker data. `S` specifies the scale to use, and `N` specifies the expected [`Noise`] type.
+    pub marker: PhantomData<(N, S)>,
+}
+
+impl<
+    I: Copy,
+    N: DirectNoise<I>,
+    R: LayerAccumulator<N::Output>,
+    S,
+    F: Fn(&mut S, &mut SeedGenerator) -> N,
+> NoiseLayer<I, S, R> for Octave<N, S, F>
+where
+    Self: Send + Sync,
+{
+    #[inline]
+    fn layer_sample(
+        &self,
+        input: &mut I,
+        seed: &mut SeedGenerator,
+        scale: &mut S,
+        amplitude: &mut impl LayerAmplitude,
+        output: &mut R,
+    ) {
+        let noise = (self.generator)(scale, seed);
+        let octave_result = noise.raw_sample(*input);
+        let amplitude = amplitude.get_next_amplitude();
+        output.accumulate(octave_result, amplitude);
+    }
+}
+
+/// Repeats a [`NoiseLayer`] `L` some number of times.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Repeat<L> {
+    /// The [`NoiseLayer`] to repeat.
+    pub layer: L,
+    /// The number of times to repeat it.
+    pub repetitions: u32,
+}
+
+impl<I, S, R, L: NoiseLayer<I, S, R>> NoiseLayer<I, S, R> for Repeat<L>
+where
+    Self: Send + Sync,
+{
+    #[inline]
+    fn layer_sample(
+        &self,
+        input: &mut I,
+        seed: &mut SeedGenerator,
+        scale: &mut S,
+        amplitude: &mut impl LayerAmplitude,
+        output: &mut R,
+    ) {
+        for _ in 0..self.repetitions {
+            self.layer
+                .layer_sample(input, seed, scale, amplitude, output);
+        }
     }
 }
