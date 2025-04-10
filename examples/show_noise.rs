@@ -8,12 +8,12 @@ use bevy::{
 use mod_noise::noise::{
     PeriodicNoise,
     adapters::Adapter,
-    cellular::CellularNoise,
+    cellular::CellNoise,
     curves::{Linear, Smoothstep},
     grid::OrthoGrid,
     norm::UNorm,
-    periodic::{Frequency, Period},
-    value::ValueNoise,
+    periodic::{Frequency, Period, TilingNoise},
+    value::SegmentalValueNoise,
     white::SeedGenerator,
 };
 
@@ -80,23 +80,27 @@ fn main() -> AppExit {
                             name: "Basic white noise",
                             frequency: Period(32.0).into(),
                             seed: 0,
-                            noise: Box::new(CellularNoise::<OrthoGrid, Adapter<UNorm>>::default()),
+                            noise: Box::new(
+                                TilingNoise::<OrthoGrid, CellNoise<Adapter<UNorm>>>::default(),
+                            ),
                         },
                         NoiseOption {
                             name: "Basic value noise",
                             frequency: Period(32.0).into(),
                             seed: 0,
-                            noise: Box::new(
-                                ValueNoise::<OrthoGrid, Adapter<UNorm>, Linear>::default(),
-                            ),
+                            noise: Box::new(TilingNoise::<
+                                OrthoGrid,
+                                SegmentalValueNoise<Adapter<UNorm>, Linear>,
+                            >::default()),
                         },
                         NoiseOption {
                             name: "Smooth value noise",
                             frequency: Period(32.0).into(),
                             seed: 0,
-                            noise: Box::new(
-                                ValueNoise::<OrthoGrid, Adapter<UNorm>, Smoothstep>::default(),
-                            ),
+                            noise: Box::new(TilingNoise::<
+                                OrthoGrid,
+                                SegmentalValueNoise<Adapter<UNorm>, Smoothstep>,
+                            >::default()),
                         },
                     ],
                     selected: 0,
@@ -147,7 +151,11 @@ fn update_system(
         changed = true;
     }
     if input.just_pressed(KeyCode::ArrowLeft) {
-        noise.selected = (noise.selected.wrapping_sub(1)) % noise.options.len();
+        noise.selected = noise
+            .selected
+            .checked_sub(1)
+            .map(|v| v % noise.options.len())
+            .unwrap_or(noise.options.len() - 1);
         changed = true;
     }
 
