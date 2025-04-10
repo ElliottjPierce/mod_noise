@@ -1,16 +1,20 @@
 //! Contains systems for layering noise ontop of eachother.
 
-use super::{Noise, NoiseValue, periodic::ScalableNoise, white::SeedGenerator};
+use super::{DirectNoise, Noise, NoiseValue, periodic::ScalableNoise, white::SeedGenerator};
 
 /// Represents the result of a series of [`NoiseLayer`]s.
-pub trait LayerAccumulator<T>: Send + Sync {
+pub trait LayerResult: Send + Sync {
     /// The final result of all the layers.
     type Result: NoiseValue;
 
-    /// Adds this `unit_value` at this `amplitude` to the result.
-    fn accumulate(&mut self, unit_value: T, amplatude: f32);
     /// Finishes the layers, returning the final result.
     fn finish(self) -> Self::Result;
+}
+
+/// Represents the ability of a [`LayerResult`] to accumulate values of `T`.
+pub trait LayerAccumulator<T>: LayerResult {
+    /// Adds this `unit_value` at this `amplitude` to the result.
+    fn accumulate(&mut self, unit_value: T, amplatude: f32);
 }
 
 /// A generator that specifies amplitude for a seriese of [`NoiseLayer`]s.
@@ -37,7 +41,7 @@ pub trait LayerScale<S>: Send + Sync {
 
 /// Represents a layer of some [`LayeredNoise`].
 /// Each layer builds on the last, producing a composition of various noises.
-pub trait NoiseLayer<I, S, O>: Send + Sync {
+pub trait NoiseLayer<I, S, R>: Send + Sync {
     /// Samples this layer of noise.
     /// This should use the `input` to [`LayerAccumulator::accumulate`] into the `output`.
     /// This may also progress `seed`, `scale`, and `amplitude`.
@@ -45,22 +49,22 @@ pub trait NoiseLayer<I, S, O>: Send + Sync {
         &self,
         input: &mut I,
         seed: &mut SeedGenerator,
-        scale: &mut impl LayerScale<S>,
+        scale: &mut S,
         amplitude: &mut impl LayerAmplitude,
-        output: &mut impl LayerAccumulator<O>,
+        output: &mut R,
     );
 }
 
 macro_rules! impl_layers {
     ($($t:ident=$f:tt),+) => {
-        impl<I, S, O, $($t: NoiseLayer<I, S, O>,)+> NoiseLayer<I, S, O> for ($($t,)+) {
+        impl<I, S, R, $($t: NoiseLayer<I, S, R>,)+> NoiseLayer<I, S, R> for ($($t,)+) {
             fn layer_sample(
                 &self,
                 input: &mut I,
                 seed: &mut SeedGenerator,
-                scale: &mut impl LayerScale<S>,
+                scale: &mut S,
                 amplitude: &mut impl LayerAmplitude,
-                output: &mut impl LayerAccumulator<O>,
+                output: &mut R,
             ) {
                 $(self.$f.layer_sample(input, seed, scale, amplitude, output);)+
             }
@@ -90,7 +94,7 @@ impl_layers!(T0 = 0, T1 = 1, T2 = 2, T3 = 3, T4 = 4, T5 = 5, T6 = 6, T7 = 7, T8 
 impl_layers!(T0 = 0, T1 = 1, T2 = 2, T3 = 3, T4 = 4, T5 = 5, T6 = 6, T7 = 7, T8 = 8, T9 = 9, T10 = 10, T11 = 11, T12 = 12, T13 = 13, T14 = 14, T15 = 15);
 }
 
-/// A [`Noise`] that operates by composing the [`NoiseLayer`]s of `L` together into some result `R`, producing a fractal appearance.
+/// A [`Noise`] that operates by composing the [`NoiseLayer`]s of `L` together into some [`LayerResult`] `R`, producing a fractal appearance.
 /// `S` denotes the [`LayerScale`] and `A` denotes the [`LayerAmplitude`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct FractalNoise<R, S, A, L> {
@@ -134,5 +138,25 @@ where
 
     fn set_scale(&mut self, scale: T) {
         self.scale.set_next_scale(scale);
+    }
+}
+
+impl<I, R: LayerResult + Clone, S: Clone, A: LayerAmplitude + Clone, L: NoiseLayer<I, S, R>>
+    DirectNoise<I> for FractalNoise<R, S, A, L>
+where
+    Self: Noise,
+{
+    type Output = R::Result;
+
+    fn raw_sample(&self, mut input: I) -> Self::Output {
+        let mut result = self.result.clone();
+        self.octaves.layer_sample(
+            &mut input,
+            &mut self.seed.clone(),
+            &mut self.scale.clone(),
+            &mut self.amplitude.clone(),
+            &mut result,
+        );
+        result.finish()
     }
 }
