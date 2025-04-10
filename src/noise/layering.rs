@@ -3,7 +3,9 @@
 use core::ops::{AddAssign, Mul};
 
 use super::{
-    CorolatedNoiseType, DirectNoise, Noise, NoiseValue, periodic::ScalableNoise,
+    CorolatedNoiseType, DirectNoise, Noise, NoiseValue,
+    norm::UNorm,
+    periodic::{Frequency, Period, ScalableNoise, WholePeriod},
     white::SeedGenerator,
 };
 
@@ -170,7 +172,7 @@ where
     }
 }
 
-/// A standard [`LayerResult`] that purely normalizes the result to what it is meant to be.
+/// A standard [`LayerResult`] that just normalizes the result to be a direct result of the accumulated values and amplitudes.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct NormalizeOctavesInto<T: NoiseValue> {
     /// The sum of all accumulated values.
@@ -196,5 +198,92 @@ impl<I, T: NoiseValue + CorolatedNoiseType<I> + AddAssign<T> + Mul<f32, Output =
         let inner = T::map_from(unit_value);
         self.base += inner * amplitude;
         self.total_amplitudes += amplitude;
+    }
+}
+
+/// A standard [`LayerScale`] that purely normalizes the result to what it is meant to be.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct FractalScaling {
+    /// The lowest frequency, the frequency of the first octave.
+    pub overall: Frequency,
+    /// Each octave's frequency is multiplied by this value.
+    pub gain: UNorm,
+}
+
+impl Default for FractalScaling {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            overall: Frequency::default(),
+            gain: UNorm::new_unchecked(0.5),
+        }
+    }
+}
+
+impl LayerScale<Frequency> for FractalScaling {
+    #[inline]
+    fn get_next_scale(&mut self) -> Frequency {
+        let res = self.overall;
+        self.overall.0 *= self.gain.get();
+        res
+    }
+
+    #[inline]
+    fn peek_next_scale(&self) -> Frequency {
+        self.overall
+    }
+
+    #[inline]
+    fn set_next_scale(&mut self, scale: Frequency) {
+        self.overall = scale;
+    }
+
+    #[inline]
+    fn multiply_scale(&mut self, multiplier: Frequency) {
+        self.overall.0 *= multiplier.0;
+    }
+}
+
+impl LayerScale<Period> for FractalScaling {
+    #[inline]
+    fn get_next_scale(&mut self) -> Period {
+        LayerScale::<Frequency>::get_next_scale(self).into()
+    }
+
+    #[inline]
+    fn peek_next_scale(&self) -> Period {
+        LayerScale::<Frequency>::peek_next_scale(self).into()
+    }
+
+    #[inline]
+    fn set_next_scale(&mut self, scale: Period) {
+        LayerScale::<Frequency>::set_next_scale(self, scale.into());
+    }
+
+    #[inline]
+    fn multiply_scale(&mut self, multiplier: Period) {
+        LayerScale::<Frequency>::multiply_scale(self, multiplier.into());
+    }
+}
+
+impl LayerScale<WholePeriod> for FractalScaling {
+    #[inline]
+    fn get_next_scale(&mut self) -> WholePeriod {
+        LayerScale::<Frequency>::get_next_scale(self).into()
+    }
+
+    #[inline]
+    fn peek_next_scale(&self) -> WholePeriod {
+        LayerScale::<Frequency>::peek_next_scale(self).into()
+    }
+
+    #[inline]
+    fn set_next_scale(&mut self, scale: WholePeriod) {
+        LayerScale::<Frequency>::set_next_scale(self, scale.into());
+    }
+
+    #[inline]
+    fn multiply_scale(&mut self, multiplier: WholePeriod) {
+        LayerScale::<Frequency>::multiply_scale(self, multiplier.into());
     }
 }

@@ -159,6 +159,20 @@ impl From<PowerOf2Period> for WholePeriod {
     }
 }
 
+impl From<Frequency> for WholePeriod {
+    #[inline]
+    fn from(value: Frequency) -> Self {
+        Self::from(Period::from(value))
+    }
+}
+
+impl From<Period> for WholePeriod {
+    #[inline]
+    fn from(value: Period) -> Self {
+        Self(value.0 as u32)
+    }
+}
+
 impl Default for WholePeriod {
     #[inline]
     fn default() -> Self {
