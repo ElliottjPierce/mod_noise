@@ -22,7 +22,7 @@ use super::{
 ///
 /// For `offset` values where each element is in ±1,
 /// [`get_gradient_dot`](GradientGenerator::get_gradient_dot) must return a value x such that x *
-/// [`NORMALIZING_FACTOR`](GradientGenerator::NORMALIZING_FACTOR) / √d is within ±1, where d is the
+/// [`NORMALIZING_FACTOR`](GradientGenerator::NORMALIZING_FACTOR) is within ±1, where d is the
 /// number od dimensions in `I`.
 pub trait GradientGenerator<I: NoiseValue>: Noise {
     /// See [`GradientGenerator`]'s safety comment for info.
@@ -62,6 +62,15 @@ impl<N: Noise, C: Curve<f32> + Send + Sync> Noise for SegmentalGradientNoise<N, 
     }
 }
 
+fn point_sample<P: PeriodicPoint<Relative: NoiseValue>, G: GradientGenerator<P::Relative>>(
+    point: P,
+    seed: u32,
+    gradients: &G,
+) -> f32 {
+    let relative = point.into_relative(seed);
+    gradients.get_gradient_dot(relative.seed, relative.offset)
+}
+
 impl<
     T: PeriodicSegment<Points: SamplablePeriodicPoints, Point = P>,
     P: PeriodicPoint<Relative: NoiseValue>,
@@ -74,11 +83,7 @@ impl<
     #[inline]
     fn raw_sample(&self, input: T) -> Self::Output {
         let raw = input.get_points().sample_smooth(
-            |point| {
-                let relative = point.into_relative(self.seed);
-                self.gradients
-                    .get_gradient_dot(relative.seed, relative.offset)
-            },
+            |point| point_sample(point, self.seed, &self.gradients),
             Ease::interpolating_curve_unbounded,
             &self.smoothing_curve,
         );
@@ -104,21 +109,13 @@ impl<
     fn sample_gradient(&self, input: T) -> (Self::Gradient, Self::Output) {
         let points = input.get_points();
         let gradient = points.sample_gradient_smooth(
-            |point| {
-                let relative = point.into_relative(self.seed);
-                self.gradients
-                    .get_gradient_dot(relative.seed, relative.offset)
-            },
+            |point| point_sample(point, self.seed, &self.gradients),
             |start, end| *end - *start,
             Ease::interpolating_curve_unbounded,
             &self.smoothing_curve,
         );
         let value = points.sample_smooth(
-            |point| {
-                let relative = point.into_relative(self.seed);
-                self.gradients
-                    .get_gradient_dot(relative.seed, relative.offset)
-            },
+            |point| point_sample(point, self.seed, &self.gradients),
             Ease::interpolating_curve_unbounded,
             &self.smoothing_curve,
         );
@@ -137,6 +134,10 @@ impl<
     }
 }
 
+const SQRT_2: f32 = core::f32::consts::SQRT_2;
+const SQRT_3: f32 = 1.7320508;
+const SQRT_4: f32 = 2.0;
+
 /// A simple perlin noise source from uniquely random values.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct RuntimeRand;
@@ -147,7 +148,7 @@ impl GradientGenerator<Vec2> for RuntimeRand {
     // The dot product can not be grater than the product of the
     // lengths, and one length is normalized and the other one is taken care of by setting
     // `NORMALIZING_FACTOR` to 2.0.
-    const NORMALIZING_FACTOR: f32 = 2.0;
+    const NORMALIZING_FACTOR: f32 = 2.0 / SQRT_2;
 
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec2) -> f32 {
@@ -161,7 +162,7 @@ impl GradientGenerator<Vec2> for RuntimeRand {
 
 impl GradientGenerator<Vec3> for RuntimeRand {
     // See impl PerlinSource<Vec2> for RuntimeRand
-    const NORMALIZING_FACTOR: f32 = 2.0;
+    const NORMALIZING_FACTOR: f32 = 2.0 / SQRT_3;
 
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec3) -> f32 {
@@ -176,7 +177,7 @@ impl GradientGenerator<Vec3> for RuntimeRand {
 
 impl GradientGenerator<Vec4> for RuntimeRand {
     // See impl PerlinSource<Vec2> for RuntimeRand
-    const NORMALIZING_FACTOR: f32 = 2.0;
+    const NORMALIZING_FACTOR: f32 = 2.0 / SQRT_4;
 
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec4) -> f32 {
@@ -200,12 +201,12 @@ impl GradientGenerator<Vec2> for Hashed {
     // The dot product can not be grater than the product of the
     // lengths, and one length is within √d. So their product is normalized by setting
     // `NORMALIZING_FACTOR` to 1.0.
-    const NORMALIZING_FACTOR: f32 = 1.0;
+    const NORMALIZING_FACTOR: f32 = 1.0 / SQRT_2;
 
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec2) -> f32 {
         let v = offset;
-        match seed & 7 {
+        match seed >> 29 {
             0 => v.x + v.y,
             1 => v.x - v.y,
             2 => -v.x + v.y,
@@ -214,7 +215,7 @@ impl GradientGenerator<Vec2> for Hashed {
             5 => -v.x,
             6 => v.y,
             7 => -v.y,
-            // SAFETY: We did & 7 above, so there is no way for the value to be > 7.
+            // SAFETY: We did >> 29 above, so there is no way for the value to be > 7.
             _ => unsafe { unreachable_unchecked() },
         }
     }
@@ -222,7 +223,7 @@ impl GradientGenerator<Vec2> for Hashed {
 
 impl GradientGenerator<Vec3> for Hashed {
     // See impl PerlinSource<Vec2> for Cardinal.
-    const NORMALIZING_FACTOR: f32 = 1.0;
+    const NORMALIZING_FACTOR: f32 = 1.0 / SQRT_3;
 
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec3) -> f32 {
@@ -251,7 +252,7 @@ impl GradientGenerator<Vec3> for Hashed {
 
 impl GradientGenerator<Vec4> for Hashed {
     // See impl PerlinSource<Vec2> for Cardinal.
-    const NORMALIZING_FACTOR: f32 = 1.0;
+    const NORMALIZING_FACTOR: f32 = 1.0 / SQRT_4;
 
     #[inline]
     fn get_gradient_dot(&self, seed: u32, offset: Vec4) -> f32 {
