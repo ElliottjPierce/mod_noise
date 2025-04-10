@@ -1,6 +1,11 @@
 //! Contains systems for layering noise ontop of eachother.
 
-use super::{DirectNoise, Noise, NoiseValue, periodic::ScalableNoise, white::SeedGenerator};
+use core::ops::{AddAssign, Mul};
+
+use super::{
+    CorolatedNoiseType, DirectNoise, Noise, NoiseValue, periodic::ScalableNoise,
+    white::SeedGenerator,
+};
 
 /// Represents the result of a series of [`NoiseLayer`]s.
 pub trait LayerResult: Send + Sync {
@@ -58,6 +63,7 @@ pub trait NoiseLayer<I, S, R>: Send + Sync {
 macro_rules! impl_layers {
     ($($t:ident=$f:tt),+) => {
         impl<I, S, R, $($t: NoiseLayer<I, S, R>,)+> NoiseLayer<I, S, R> for ($($t,)+) {
+            #[inline]
             fn layer_sample(
                 &self,
                 input: &mut I,
@@ -96,7 +102,7 @@ impl_layers!(T0 = 0, T1 = 1, T2 = 2, T3 = 3, T4 = 4, T5 = 5, T6 = 6, T7 = 7, T8 
 
 /// A [`Noise`] that operates by composing the [`NoiseLayer`]s of `L` together into some [`LayerResult`] `R`, producing a fractal appearance.
 /// `S` denotes the [`LayerScale`] and `A` denotes the [`LayerAmplitude`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct FractalNoise<R, S, A, L> {
     /// The scale, which defines the scale of each octave and its progression.
     /// The values of this will determine the starting point for each sample.
@@ -132,10 +138,12 @@ impl<T, R, S: LayerScale<T>, A, L> ScalableNoise<T> for FractalNoise<R, S, A, L>
 where
     Self: Noise,
 {
+    #[inline]
     fn get_scale(&self) -> T {
         self.scale.peek_next_scale()
     }
 
+    #[inline]
     fn set_scale(&mut self, scale: T) {
         self.scale.set_next_scale(scale);
     }
@@ -148,6 +156,7 @@ where
 {
     type Output = R::Result;
 
+    #[inline]
     fn raw_sample(&self, mut input: I) -> Self::Output {
         let mut result = self.result.clone();
         self.octaves.layer_sample(
@@ -158,5 +167,34 @@ where
             &mut result,
         );
         result.finish()
+    }
+}
+
+/// A standard [`LayerResult`] that purely normalizes the result to what it is meant to be.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct NormalizeOctavesInto<T: NoiseValue> {
+    /// The sum of all accumulated values.
+    pub base: T,
+    /// The total of all accumulated amplitudes.
+    pub total_amplitudes: f32,
+}
+
+impl<T: NoiseValue + Mul<f32, Output = T>> LayerResult for NormalizeOctavesInto<T> {
+    type Result = T;
+
+    #[inline]
+    fn finish(self) -> Self::Result {
+        self.base * (1.0 / self.total_amplitudes)
+    }
+}
+
+impl<I, T: NoiseValue + CorolatedNoiseType<I> + AddAssign<T> + Mul<f32, Output = T>>
+    LayerAccumulator<I> for NormalizeOctavesInto<T>
+{
+    #[inline]
+    fn accumulate(&mut self, unit_value: I, amplitude: f32) {
+        let inner = T::map_from(unit_value);
+        self.base += inner * amplitude;
+        self.total_amplitudes += amplitude;
     }
 }
