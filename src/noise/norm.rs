@@ -41,6 +41,12 @@ impl UNorm {
     pub fn get(self) -> f32 {
         self.0
     }
+
+    /// Constructs a new [`UNorm`], assuming it to be in range [0, 1).
+    #[inline]
+    pub fn new_unchecked(value: f32) -> Self {
+        Self(value)
+    }
 }
 
 impl Mul<UNorm> for UNorm {
