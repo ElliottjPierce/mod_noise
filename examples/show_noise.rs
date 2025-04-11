@@ -15,8 +15,8 @@ use mod_noise::noise::{
     },
     grid::OrthoGrid,
     layering::{
-        DefaultAndSet, FractalNoise, FractalScaling, NormalizeOctavesInto, OctaveNoiseBuilderBase,
-        ProportionalAmplitude, Repeat,
+        DefaultAndSet, FractalNoise, FractalScaling, NoiseLayerBase, NormalizeOctavesInto,
+        OctaveNoiseBuilderBase, ProportionalAmplitude,
     },
     norm::UNorm,
     periodic::{Frequency, Period, TilingNoise},
@@ -152,17 +152,15 @@ fn main() -> AppExit {
                                 result: NormalizeOctavesInto::<f32>::default(),
                                 finalizer: Adapter::<UNorm>::default(),
                                 seed: SeedGenerator::default(),
-                                octaves: Repeat::new(
-                                    8,
-                                    DefaultAndSet.build_octave::<TilingNoise<
+                                octaves: DefaultAndSet
+                                    .build_octave::<TilingNoise<
                                         OrthoGrid,
                                         SegmentalGradientNoise<
                                             ApproximateUniformGradients,
                                             Smoothstep,
                                         >,
-                                    >, Frequency>(
-                                    ),
-                                ),
+                                    >, Frequency>()
+                                    .repeat(8),
                             }),
                         },
                     ],
