@@ -3,8 +3,7 @@
 use bevy_math::{Curve, HasTangent, curve::derivatives::SampleDerivative};
 
 use super::{
-    DirectNoise, DirectNoiseBuilder, GradientNoise, Noise, NoiseBuilder, NoiseValue,
-    white::SeedGenerator,
+    DirectNoise, GradientNoise, Noise, NoiseValue, curves::Lerpable, white::SeedGenerator,
 };
 
 /// Represents a [`Noise`] that divides its domain into [`PeriodicSegment`] according to some period `T`.
@@ -53,10 +52,9 @@ pub trait SamplablePeriodicPoints: PeriodicPoints {
     /// Interpolates between these points, producing some result.
     /// The bounds of `curve` are not checked.
     /// It is up to the caller to verify that they are valid for this domain.
-    fn sample_smooth<T, L: Curve<T>>(
+    fn sample_smooth<T: Lerpable>(
         &self,
         f: impl FnMut(Self::Point) -> T,
-        lerp: impl Fn(T, T) -> L,
         curve: &impl Curve<f32>,
     ) -> T;
 }
@@ -70,11 +68,10 @@ pub trait DiferentiablePeriodicPoints: SamplablePeriodicPoints {
     /// Interpolates between these points, producing the gradient of the interpolation.
     /// The bounds of `curve` are not checked.
     /// It is up to the caller to verify that they are valid for this domain.
-    fn sample_gradient_smooth<T: HasTangent, L: Curve<T::Tangent>>(
+    fn sample_gradient_smooth<T: HasTangent<Tangent: Lerpable>>(
         &self,
         f: impl FnMut(Self::Point) -> T,
         difference: impl Fn(&T, &T) -> T::Tangent,
-        lerp: impl Fn(T::Tangent, T::Tangent) -> L,
         curve: &impl SampleDerivative<f32>,
     ) -> Self::Gradient<T::Tangent>;
 }
@@ -196,7 +193,7 @@ impl Default for PowerOf2Period {
 
 /// Represents slicing a domain into [`PeriodicSegment`]s via `P` and then computing noise within segments via `N`.
 /// The noise itself may not tile in the traditional sense, but it is composed of tiles of noise.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TilingNoise<P, N> {
     /// The noise for making the [`PeriodicSegment`]s.
     pub tilier: P,
@@ -212,15 +209,12 @@ impl<P: Noise, N: Noise> Noise for TilingNoise<P, N> {
     }
 }
 
-impl<S, P: ScalableNoise<S>, N: Noise> NoiseBuilder<TilingNoise<P, N>, S> for DirectNoiseBuilder
-where
-    Self: NoiseBuilder<N, ()> + NoiseBuilder<P, S>,
-{
+impl<P: Default, N: Default> Default for TilingNoise<P, N> {
     #[inline]
-    fn build(&self, seed: &mut SeedGenerator, scale: S) -> TilingNoise<P, N> {
-        TilingNoise {
-            tilier: NoiseBuilder::<P, S>::build(self, seed, scale),
-            tile: NoiseBuilder::<N, ()>::build(self, seed, ()),
+    fn default() -> Self {
+        Self {
+            tilier: P::default(),
+            tile: N::default(),
         }
     }
 }

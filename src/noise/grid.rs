@@ -1,50 +1,51 @@
 //! Periodic noise for orthogonal grids
 
 use bevy_math::{
-    Curve, IVec2, IVec3, IVec4, UVec2, UVec3, UVec4, Vec2, Vec3, Vec3A, Vec4,
+    Curve, HasTangent, IVec2, IVec3, IVec4, UVec2, UVec3, UVec4, Vec2, Vec3, Vec3A, Vec4,
     curve::derivatives::SampleDerivative,
 };
 
 use super::{
-    DirectNoise, DirectNoiseBuilder, Noise, NoiseBuilder, NoiseValue,
+    DirectNoise, Noise, NoiseValue,
+    curves::Lerpable,
     periodic::{
         DiferentiablePeriodicPoints, Frequency, Period, PeriodicPoint, PeriodicPoints,
         PeriodicSegment, PowerOf2Period, RelativePeriodicPoint, SamplablePeriodicPoints,
         ScalableNoise, WholePeriod,
     },
-    white::{SeedGenerator, White32},
+    white::White32,
 };
 
 /// A [`ScalableNoise`] that produces [`GridSquare`] using [`PowerOf2Period`].
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct OrthoGridPowerOf2(pub PowerOf2Period);
 
-impl NoiseBuilder<OrthoGridPowerOf2, PowerOf2Period> for DirectNoiseBuilder {
+impl Default for OrthoGridPowerOf2 {
     #[inline]
-    fn build(&self, _seed: &mut SeedGenerator, scale: PowerOf2Period) -> OrthoGridPowerOf2 {
-        OrthoGridPowerOf2(scale)
+    fn default() -> Self {
+        Self(Default::default())
     }
 }
 
 /// A [`ScalableNoise`] that produces [`GridSquare`] using [`WholePeriod`].
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct OrthoGridInteger(pub WholePeriod);
 
-impl NoiseBuilder<OrthoGridInteger, WholePeriod> for DirectNoiseBuilder {
+impl Default for OrthoGridInteger {
     #[inline]
-    fn build(&self, _seed: &mut SeedGenerator, scale: WholePeriod) -> OrthoGridInteger {
-        OrthoGridInteger(scale)
+    fn default() -> Self {
+        Self(Default::default())
     }
 }
 
 /// A [`ScalableNoise`] that produces [`GridSquare`] using [`Frequency`]
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct OrthoGrid(pub Frequency);
 
-impl NoiseBuilder<OrthoGrid, Frequency> for DirectNoiseBuilder {
+impl Default for OrthoGrid {
     #[inline]
-    fn build(&self, _seed: &mut SeedGenerator, scale: Frequency) -> OrthoGrid {
-        OrthoGrid(scale)
+    fn default() -> Self {
+        Self(Default::default())
     }
 }
 
@@ -220,10 +221,9 @@ impl GridSquare<UVec2, Vec2> {
 
 impl SamplablePeriodicPoints for GridSquare<UVec2, Vec2> {
     #[inline]
-    fn sample_smooth<T, L: Curve<T>>(
+    fn sample_smooth<T: Lerpable>(
         &self,
         f: impl FnMut(Self::Point) -> T,
-        lerp: impl Fn(T, T) -> L,
         curve: &impl Curve<f32>,
     ) -> T {
         // points
@@ -231,9 +231,9 @@ impl SamplablePeriodicPoints for GridSquare<UVec2, Vec2> {
         let mix = self.offset_from_corner.map(|t| curve.sample_unchecked(t));
 
         // lerp
-        let l = lerp(ld, lu).sample_unchecked(mix.y);
-        let r = lerp(rd, ru).sample_unchecked(mix.y);
-        lerp(l, r).sample_unchecked(mix.x)
+        let l = ld.lerp_to(lu).sample_unchecked(mix.y);
+        let r = rd.lerp_to(ru).sample_unchecked(mix.y);
+        l.lerp_to(r).sample_unchecked(mix.x)
     }
 }
 
@@ -241,11 +241,10 @@ impl DiferentiablePeriodicPoints for GridSquare<UVec2, Vec2> {
     type Gradient<D> = [D; 2];
 
     #[inline]
-    fn sample_gradient_smooth<T: bevy_math::HasTangent, L: Curve<T::Tangent>>(
+    fn sample_gradient_smooth<T: HasTangent<Tangent: Lerpable>>(
         &self,
         f: impl FnMut(Self::Point) -> T,
         difference: impl Fn(&T, &T) -> T::Tangent,
-        lerp: impl Fn(T::Tangent, T::Tangent) -> L,
         curve: &impl SampleDerivative<f32>,
     ) -> Self::Gradient<T::Tangent> {
         // points
@@ -262,8 +261,8 @@ impl DiferentiablePeriodicPoints for GridSquare<UVec2, Vec2> {
         let lu_ru = difference(&lu, &ru);
 
         // lerp
-        let dx = lerp(ld_rd, lu_ru).sample_unchecked(mix_y.value) * mix_x.derivative;
-        let dy = lerp(ld_lu, rd_ru).sample_unchecked(mix_x.value) * mix_y.derivative;
+        let dx = ld_rd.lerp_to(lu_ru).sample_unchecked(mix_y.value) * mix_x.derivative;
+        let dy = ld_lu.lerp_to(rd_ru).sample_unchecked(mix_x.value) * mix_y.derivative;
         [dx, dy]
     }
 }
@@ -291,10 +290,9 @@ impl GridSquare<UVec3, Vec3> {
 
 impl SamplablePeriodicPoints for GridSquare<UVec3, Vec3> {
     #[inline]
-    fn sample_smooth<T, L: Curve<T>>(
+    fn sample_smooth<T: Lerpable>(
         &self,
         f: impl FnMut(Self::Point) -> T,
-        lerp: impl Fn(T, T) -> L,
         curve: &impl Curve<f32>,
     ) -> T {
         // points
@@ -302,13 +300,13 @@ impl SamplablePeriodicPoints for GridSquare<UVec3, Vec3> {
         let mix = self.offset_from_corner.map(|t| curve.sample_unchecked(t));
 
         // lerp
-        let ld = lerp(ldb, ldf).sample_unchecked(mix.z);
-        let lu = lerp(lub, luf).sample_unchecked(mix.z);
-        let rd = lerp(rdb, rdf).sample_unchecked(mix.z);
-        let ru = lerp(rub, ruf).sample_unchecked(mix.z);
-        let l = lerp(ld, lu).sample_unchecked(mix.y);
-        let r = lerp(rd, ru).sample_unchecked(mix.y);
-        lerp(l, r).sample_unchecked(mix.x)
+        let ld = ldb.lerp_to(ldf).sample_unchecked(mix.z);
+        let lu = lub.lerp_to(luf).sample_unchecked(mix.z);
+        let rd = rdb.lerp_to(rdf).sample_unchecked(mix.z);
+        let ru = rub.lerp_to(ruf).sample_unchecked(mix.z);
+        let l = ld.lerp_to(lu).sample_unchecked(mix.y);
+        let r = rd.lerp_to(ru).sample_unchecked(mix.y);
+        l.lerp_to(r).sample_unchecked(mix.x)
     }
 }
 
@@ -316,11 +314,10 @@ impl DiferentiablePeriodicPoints for GridSquare<UVec3, Vec3> {
     type Gradient<D> = [D; 3];
 
     #[inline]
-    fn sample_gradient_smooth<T: bevy_math::HasTangent, L: Curve<T::Tangent>>(
+    fn sample_gradient_smooth<T: HasTangent<Tangent: Lerpable>>(
         &self,
         f: impl FnMut(Self::Point) -> T,
         difference: impl Fn(&T, &T) -> T::Tangent,
-        lerp: impl Fn(T::Tangent, T::Tangent) -> L,
         curve: &impl SampleDerivative<f32>,
     ) -> Self::Gradient<T::Tangent> {
         // points// points
@@ -348,19 +345,19 @@ impl DiferentiablePeriodicPoints for GridSquare<UVec3, Vec3> {
 
         // lerp
         let dx = {
-            let d = lerp(ldb_rdb, ldf_rdf).sample_unchecked(mix_z.value);
-            let u = lerp(lub_rub, luf_ruf).sample_unchecked(mix_z.value);
-            lerp(d, u).sample_unchecked(mix_y.value)
+            let d = ldb_rdb.lerp_to(ldf_rdf).sample_unchecked(mix_z.value);
+            let u = lub_rub.lerp_to(luf_ruf).sample_unchecked(mix_z.value);
+            d.lerp_to(u).sample_unchecked(mix_y.value)
         } * mix_x.derivative;
         let dy = {
-            let l = lerp(ldb_lub, ldf_luf).sample_unchecked(mix_z.value);
-            let r = lerp(rdb_rub, rdf_ruf).sample_unchecked(mix_z.value);
-            lerp(l, r).sample_unchecked(mix_x.value)
+            let l = ldb_lub.lerp_to(ldf_luf).sample_unchecked(mix_z.value);
+            let r = rdb_rub.lerp_to(rdf_ruf).sample_unchecked(mix_z.value);
+            l.lerp_to(r).sample_unchecked(mix_x.value)
         } * mix_y.derivative;
         let dz = {
-            let l = lerp(ldb_ldf, lub_luf).sample_unchecked(mix_y.value);
-            let r = lerp(rdb_rdf, rub_ruf).sample_unchecked(mix_y.value);
-            lerp(l, r).sample_unchecked(mix_x.value)
+            let l = ldb_ldf.lerp_to(lub_luf).sample_unchecked(mix_y.value);
+            let r = rdb_rdf.lerp_to(rub_ruf).sample_unchecked(mix_y.value);
+            l.lerp_to(r).sample_unchecked(mix_x.value)
         } * mix_z.derivative;
 
         [dx, dy, dz]
@@ -393,10 +390,9 @@ impl GridSquare<UVec3, Vec3A> {
 
 impl SamplablePeriodicPoints for GridSquare<UVec3, Vec3A> {
     #[inline]
-    fn sample_smooth<T, L: Curve<T>>(
+    fn sample_smooth<T: Lerpable>(
         &self,
         f: impl FnMut(Self::Point) -> T,
-        lerp: impl Fn(T, T) -> L,
         curve: &impl Curve<f32>,
     ) -> T {
         // points
@@ -404,13 +400,13 @@ impl SamplablePeriodicPoints for GridSquare<UVec3, Vec3A> {
         let mix = self.offset_from_corner.map(|t| curve.sample_unchecked(t));
 
         // lerp
-        let ld = lerp(ldb, ldf).sample_unchecked(mix.z);
-        let lu = lerp(lub, luf).sample_unchecked(mix.z);
-        let rd = lerp(rdb, rdf).sample_unchecked(mix.z);
-        let ru = lerp(rub, ruf).sample_unchecked(mix.z);
-        let l = lerp(ld, lu).sample_unchecked(mix.y);
-        let r = lerp(rd, ru).sample_unchecked(mix.y);
-        lerp(l, r).sample_unchecked(mix.x)
+        let ld = ldb.lerp_to(ldf).sample_unchecked(mix.z);
+        let lu = lub.lerp_to(luf).sample_unchecked(mix.z);
+        let rd = rdb.lerp_to(rdf).sample_unchecked(mix.z);
+        let ru = rub.lerp_to(ruf).sample_unchecked(mix.z);
+        let l = ld.lerp_to(lu).sample_unchecked(mix.y);
+        let r = rd.lerp_to(ru).sample_unchecked(mix.y);
+        l.lerp_to(r).sample_unchecked(mix.x)
     }
 }
 
@@ -418,11 +414,10 @@ impl DiferentiablePeriodicPoints for GridSquare<UVec3, Vec3A> {
     type Gradient<D> = [D; 3];
 
     #[inline]
-    fn sample_gradient_smooth<T: bevy_math::HasTangent, L: Curve<T::Tangent>>(
+    fn sample_gradient_smooth<T: HasTangent<Tangent: Lerpable>>(
         &self,
         f: impl FnMut(Self::Point) -> T,
         difference: impl Fn(&T, &T) -> T::Tangent,
-        lerp: impl Fn(T::Tangent, T::Tangent) -> L,
         curve: &impl SampleDerivative<f32>,
     ) -> Self::Gradient<T::Tangent> {
         // points// points
@@ -450,19 +445,19 @@ impl DiferentiablePeriodicPoints for GridSquare<UVec3, Vec3A> {
 
         // lerp
         let dx = {
-            let d = lerp(ldb_rdb, ldf_rdf).sample_unchecked(mix_z.value);
-            let u = lerp(lub_rub, luf_ruf).sample_unchecked(mix_z.value);
-            lerp(d, u).sample_unchecked(mix_y.value)
+            let d = ldb_rdb.lerp_to(ldf_rdf).sample_unchecked(mix_z.value);
+            let u = lub_rub.lerp_to(luf_ruf).sample_unchecked(mix_z.value);
+            d.lerp_to(u).sample_unchecked(mix_y.value)
         } * mix_x.derivative;
         let dy = {
-            let l = lerp(ldb_lub, ldf_luf).sample_unchecked(mix_z.value);
-            let r = lerp(rdb_rub, rdf_ruf).sample_unchecked(mix_z.value);
-            lerp(l, r).sample_unchecked(mix_x.value)
+            let l = ldb_lub.lerp_to(ldf_luf).sample_unchecked(mix_z.value);
+            let r = rdb_rub.lerp_to(rdf_ruf).sample_unchecked(mix_z.value);
+            l.lerp_to(r).sample_unchecked(mix_x.value)
         } * mix_y.derivative;
         let dz = {
-            let l = lerp(ldb_ldf, lub_luf).sample_unchecked(mix_y.value);
-            let r = lerp(rdb_rdf, rub_ruf).sample_unchecked(mix_y.value);
-            lerp(l, r).sample_unchecked(mix_x.value)
+            let l = ldb_ldf.lerp_to(lub_luf).sample_unchecked(mix_y.value);
+            let r = rdb_rdf.lerp_to(rub_ruf).sample_unchecked(mix_y.value);
+            l.lerp_to(r).sample_unchecked(mix_x.value)
         } * mix_z.derivative;
 
         [dx, dy, dz]
@@ -503,10 +498,9 @@ impl GridSquare<UVec4, Vec4> {
 
 impl SamplablePeriodicPoints for GridSquare<UVec4, Vec4> {
     #[inline]
-    fn sample_smooth<T, L: Curve<T>>(
+    fn sample_smooth<T: Lerpable>(
         &self,
         f: impl FnMut(Self::Point) -> T,
-        lerp: impl Fn(T, T) -> L,
         curve: &impl Curve<f32>,
     ) -> T {
         // points
@@ -531,21 +525,21 @@ impl SamplablePeriodicPoints for GridSquare<UVec4, Vec4> {
         let mix = self.offset_from_corner.map(|t| curve.sample_unchecked(t));
 
         // lerp
-        let ldb = lerp(ldbp, ldbq).sample_unchecked(mix.w);
-        let ldf = lerp(ldfp, ldfq).sample_unchecked(mix.w);
-        let lub = lerp(lubp, lubq).sample_unchecked(mix.w);
-        let luf = lerp(lufp, lufq).sample_unchecked(mix.w);
-        let rdb = lerp(rdbp, rdbq).sample_unchecked(mix.w);
-        let rdf = lerp(rdfp, rdfq).sample_unchecked(mix.w);
-        let rub = lerp(rubp, rubq).sample_unchecked(mix.w);
-        let ruf = lerp(rufp, rufq).sample_unchecked(mix.w);
-        let ld = lerp(ldb, ldf).sample_unchecked(mix.z);
-        let lu = lerp(lub, luf).sample_unchecked(mix.z);
-        let rd = lerp(rdb, rdf).sample_unchecked(mix.z);
-        let ru = lerp(rub, ruf).sample_unchecked(mix.z);
-        let l = lerp(ld, lu).sample_unchecked(mix.y);
-        let r = lerp(rd, ru).sample_unchecked(mix.y);
-        lerp(l, r).sample_unchecked(mix.x)
+        let ldb = ldbp.lerp_to(ldbq).sample_unchecked(mix.w);
+        let ldf = ldfp.lerp_to(ldfq).sample_unchecked(mix.w);
+        let lub = lubp.lerp_to(lubq).sample_unchecked(mix.w);
+        let luf = lufp.lerp_to(lufq).sample_unchecked(mix.w);
+        let rdb = rdbp.lerp_to(rdbq).sample_unchecked(mix.w);
+        let rdf = rdfp.lerp_to(rdfq).sample_unchecked(mix.w);
+        let rub = rubp.lerp_to(rubq).sample_unchecked(mix.w);
+        let ruf = rufp.lerp_to(rufq).sample_unchecked(mix.w);
+        let ld = ldb.lerp_to(ldf).sample_unchecked(mix.z);
+        let lu = lub.lerp_to(luf).sample_unchecked(mix.z);
+        let rd = rdb.lerp_to(rdf).sample_unchecked(mix.z);
+        let ru = rub.lerp_to(ruf).sample_unchecked(mix.z);
+        let l = ld.lerp_to(lu).sample_unchecked(mix.y);
+        let r = rd.lerp_to(ru).sample_unchecked(mix.y);
+        l.lerp_to(r).sample_unchecked(mix.x)
     }
 }
 
@@ -553,11 +547,10 @@ impl DiferentiablePeriodicPoints for GridSquare<UVec4, Vec4> {
     type Gradient<D> = [D; 4];
 
     #[inline]
-    fn sample_gradient_smooth<T: bevy_math::HasTangent, L: Curve<T::Tangent>>(
+    fn sample_gradient_smooth<T: HasTangent<Tangent: Lerpable>>(
         &self,
         f: impl FnMut(Self::Point) -> T,
         difference: impl Fn(&T, &T) -> T::Tangent,
-        lerp: impl Fn(T::Tangent, T::Tangent) -> L,
         curve: &impl SampleDerivative<f32>,
     ) -> Self::Gradient<T::Tangent> {
         // points// points
@@ -623,40 +616,40 @@ impl DiferentiablePeriodicPoints for GridSquare<UVec4, Vec4> {
 
         // lerp
         let dx = {
-            let db = lerp(ldbp_rdbp, ldbq_rdbq).sample_unchecked(mix_w.value);
-            let df = lerp(ldfp_rdfp, ldfq_rdfq).sample_unchecked(mix_w.value);
-            let ub = lerp(lubp_rubp, lubq_rubq).sample_unchecked(mix_w.value);
-            let uf = lerp(lufp_rufp, lufq_rufq).sample_unchecked(mix_w.value);
-            let d = lerp(db, df).sample_unchecked(mix_z.value);
-            let u = lerp(ub, uf).sample_unchecked(mix_z.value);
-            lerp(d, u).sample_unchecked(mix_y.value)
+            let db = ldbp_rdbp.lerp_to(ldbq_rdbq).sample_unchecked(mix_w.value);
+            let df = ldfp_rdfp.lerp_to(ldfq_rdfq).sample_unchecked(mix_w.value);
+            let ub = lubp_rubp.lerp_to(lubq_rubq).sample_unchecked(mix_w.value);
+            let uf = lufp_rufp.lerp_to(lufq_rufq).sample_unchecked(mix_w.value);
+            let d = db.lerp_to(df).sample_unchecked(mix_z.value);
+            let u = ub.lerp_to(uf).sample_unchecked(mix_z.value);
+            d.lerp_to(u).sample_unchecked(mix_y.value)
         } * mix_x.derivative;
         let dy = {
-            let lb = lerp(ldbp_lubp, ldbq_lubq).sample_unchecked(mix_w.value);
-            let lf = lerp(ldfp_lufp, ldfq_lufq).sample_unchecked(mix_w.value);
-            let rb = lerp(rdbp_rubp, rdbq_rubq).sample_unchecked(mix_w.value);
-            let rf = lerp(rdfp_rufp, rdfq_rufq).sample_unchecked(mix_w.value);
-            let l = lerp(lb, lf).sample_unchecked(mix_z.value);
-            let r = lerp(rb, rf).sample_unchecked(mix_z.value);
-            lerp(l, r).sample_unchecked(mix_x.value)
+            let lb = ldbp_lubp.lerp_to(ldbq_lubq).sample_unchecked(mix_w.value);
+            let lf = ldfp_lufp.lerp_to(ldfq_lufq).sample_unchecked(mix_w.value);
+            let rb = rdbp_rubp.lerp_to(rdbq_rubq).sample_unchecked(mix_w.value);
+            let rf = rdfp_rufp.lerp_to(rdfq_rufq).sample_unchecked(mix_w.value);
+            let l = lb.lerp_to(lf).sample_unchecked(mix_z.value);
+            let r = rb.lerp_to(rf).sample_unchecked(mix_z.value);
+            l.lerp_to(r).sample_unchecked(mix_x.value)
         } * mix_y.derivative;
         let dz = {
-            let ld = lerp(ldbp_ldfp, ldbq_ldfq).sample_unchecked(mix_w.value);
-            let lu = lerp(lubp_lufp, lubq_lufq).sample_unchecked(mix_w.value);
-            let rd = lerp(rdbp_rdfp, rdbq_rdfq).sample_unchecked(mix_w.value);
-            let ru = lerp(rubp_rufp, rubq_rufq).sample_unchecked(mix_w.value);
-            let d = lerp(ld, rd).sample_unchecked(mix_x.value);
-            let u = lerp(lu, ru).sample_unchecked(mix_x.value);
-            lerp(d, u).sample_unchecked(mix_y.value)
+            let ld = ldbp_ldfp.lerp_to(ldbq_ldfq).sample_unchecked(mix_w.value);
+            let lu = lubp_lufp.lerp_to(lubq_lufq).sample_unchecked(mix_w.value);
+            let rd = rdbp_rdfp.lerp_to(rdbq_rdfq).sample_unchecked(mix_w.value);
+            let ru = rubp_rufp.lerp_to(rubq_rufq).sample_unchecked(mix_w.value);
+            let d = ld.lerp_to(rd).sample_unchecked(mix_x.value);
+            let u = lu.lerp_to(ru).sample_unchecked(mix_x.value);
+            d.lerp_to(u).sample_unchecked(mix_y.value)
         } * mix_z.derivative;
         let dw = {
-            let ld = lerp(ldbp_ldbq, ldfp_ldfq).sample_unchecked(mix_z.value);
-            let lu = lerp(lubp_lubq, lufp_lufq).sample_unchecked(mix_z.value);
-            let rd = lerp(rdbp_rdbq, rdfp_rdfq).sample_unchecked(mix_z.value);
-            let ru = lerp(rubp_rubq, rufp_rufq).sample_unchecked(mix_z.value);
-            let d = lerp(ld, rd).sample_unchecked(mix_x.value);
-            let u = lerp(lu, ru).sample_unchecked(mix_x.value);
-            lerp(d, u).sample_unchecked(mix_y.value)
+            let ld = ldbp_ldbq.lerp_to(ldfp_ldfq).sample_unchecked(mix_z.value);
+            let lu = lubp_lubq.lerp_to(lufp_lufq).sample_unchecked(mix_z.value);
+            let rd = rdbp_rdbq.lerp_to(rdfp_rdfq).sample_unchecked(mix_z.value);
+            let ru = rubp_rubq.lerp_to(rufp_rufq).sample_unchecked(mix_z.value);
+            let d = ld.lerp_to(rd).sample_unchecked(mix_x.value);
+            let u = lu.lerp_to(ru).sample_unchecked(mix_x.value);
+            d.lerp_to(u).sample_unchecked(mix_y.value)
         } * mix_w.derivative;
         [dx, dy, dz, dw]
     }

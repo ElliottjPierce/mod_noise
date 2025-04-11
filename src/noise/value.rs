@@ -2,13 +2,11 @@
 
 use core::ops::Sub;
 
-use bevy_math::{
-    Curve, HasTangent,
-    curve::{Ease, derivatives::SampleDerivative},
-};
+use bevy_math::{Curve, HasTangent, curve::derivatives::SampleDerivative};
 
 use super::{
-    DirectNoise, DirectNoiseBuilder, GradientNoise, Noise, NoiseBuilder,
+    DirectNoise, GradientNoise, Noise,
+    curves::Lerpable,
     periodic::{
         DiferentiablePeriodicPoints, PeriodicPoint, PeriodicSegment, SamplablePeriodicPoints,
     },
@@ -16,7 +14,7 @@ use super::{
 };
 
 /// Represents some noise on the [`PeriodicPoint`]s of a [`PeriodicSegment`] where values between those points are smoothed out accordingly.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SegmentalValueNoise<N, C> {
     /// The noise for each of the [`PeriodicPoint`]s.
     pub noise: N,
@@ -27,6 +25,17 @@ pub struct SegmentalValueNoise<N, C> {
     pub seed: u32,
 }
 
+impl<N: Default, C: Default> Default for SegmentalValueNoise<N, C> {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            noise: N::default(),
+            smoothing_curve: C::default(),
+            seed: 0,
+        }
+    }
+}
+
 impl<N: Noise, C: Curve<f32> + Send + Sync> Noise for SegmentalValueNoise<N, C> {
     #[inline]
     fn set_seed(&mut self, seed: &mut SeedGenerator) {
@@ -35,24 +44,9 @@ impl<N: Noise, C: Curve<f32> + Send + Sync> Noise for SegmentalValueNoise<N, C> 
     }
 }
 
-impl<N: Noise, C: Curve<f32> + Default> NoiseBuilder<SegmentalValueNoise<N, C>, ()>
-    for DirectNoiseBuilder
-where
-    Self: NoiseBuilder<N, ()>,
-{
-    #[inline]
-    fn build(&self, seed: &mut SeedGenerator, _scale: ()) -> SegmentalValueNoise<N, C> {
-        SegmentalValueNoise {
-            noise: NoiseBuilder::<N, ()>::build(self, seed, ()),
-            smoothing_curve: C::default(),
-            seed: seed.next_seed(),
-        }
-    }
-}
-
 impl<
     T: PeriodicSegment<Points: SamplablePeriodicPoints>,
-    N: DirectNoise<u32, Output: Ease>,
+    N: DirectNoise<u32, Output: Lerpable>,
     C: Curve<f32> + Send + Sync,
 > DirectNoise<T> for SegmentalValueNoise<N, C>
 {
@@ -65,7 +59,6 @@ impl<
                 let point = point.into_relative(self.seed).seed;
                 self.noise.raw_sample(point)
             },
-            Ease::interpolating_curve_unbounded,
             &self.smoothing_curve,
         )
     }
@@ -73,7 +66,7 @@ impl<
 
 impl<
     T: PeriodicSegment<Points: DiferentiablePeriodicPoints>,
-    O: Ease + Copy + HasTangent<Tangent = O> + Sub<O, Output = O>,
+    O: Lerpable + Copy + HasTangent<Tangent = O> + Sub<O, Output = O>,
     N: DirectNoise<u32, Output = O>,
     C: SampleDerivative<f32> + Send + Sync,
 > GradientNoise<T> for SegmentalValueNoise<N, C>
@@ -89,7 +82,6 @@ impl<
                 self.noise.raw_sample(point)
             },
             |start, end| *end - *start,
-            Ease::interpolating_curve_unbounded,
             &self.smoothing_curve,
         );
         let value = points.sample_smooth(
@@ -97,7 +89,6 @@ impl<
                 let point = point.into_relative(self.seed).seed;
                 self.noise.raw_sample(point)
             },
-            Ease::interpolating_curve_unbounded,
             &self.smoothing_curve,
         );
         (gradient, value)

@@ -50,18 +50,6 @@ pub trait LayerScale<S>: Send + Sync {
 
 /// A root for [`NoiseLayer`].
 pub trait NoiseLayerBase: Send + Sync {
-    /// Repeats this octave `times` many times via [`Repeat`].
-    #[inline]
-    fn repeat(self, times: u32) -> Repeat<Self>
-    where
-        Self: Sized,
-    {
-        Repeat {
-            layer: self,
-            repetitions: times,
-        }
-    }
-
     /// `next_octave` will come after this one.
     /// This is done via tuples.
     /// Note that it is often cleaner to specify layers via `(Layer1, Layer2, Layer3, ...)`
@@ -367,23 +355,25 @@ impl LayerAmplitude for ProportionalAmplitude {
 
 /// Represents a "normal" octave of noise built from a [`OctaveNoiseBuilder`] `B`, which builds a [`Noise`] `N` that is a [`ScalableNoise<S>`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Octave<N, S, B> {
+pub struct Octaves<N, S, B> {
     /// The [`OctaveNoiseBuilder`]
     pub builder: B,
+    /// Defines how man octaves are in this [`NoiseLayer`].
+    pub octaves: u32,
     /// Marker data for [`Noise`] `N` that is a [`ScalableNoise<S>`].
     pub marker: PhantomData<(N, S)>,
 }
 
-impl<N, S, B: NoiseBuilderBase> NoiseLayerBase for Octave<N, S, B> where Self: Send + Sync {}
+impl<N, S, B: NoiseBuilderBase> NoiseLayerBase for Octaves<N, S, B> where Self: Send + Sync {}
 
 impl<
     I: Copy,
     NS,
-    N: DirectNoise<I>,
+    N: DirectNoise<I> + ScalableNoise<NS>,
     R: LayerAccumulator<N::Output>,
     S: LayerScale<NS>,
-    B: NoiseBuilder<N, NS>,
-> NoiseLayer<I, S, R> for Octave<N, NS, B>
+    B: NoiseBuilder<N>,
+> NoiseLayer<I, S, R> for Octaves<N, NS, B>
 where
     Self: NoiseLayerBase,
 {
@@ -396,40 +386,13 @@ where
         amplitude: &mut impl LayerAmplitude,
         output: &mut R,
     ) {
-        let noise = self.builder.build(seed, scale.get_next_scale());
-        let octave_result = noise.raw_sample(*input);
-        let amplitude = amplitude.get_next_amplitude();
-        output.accumulate(octave_result, amplitude);
-    }
-}
-
-/// Repeats a [`NoiseLayer`] `L` some number of times.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Repeat<L> {
-    /// The [`NoiseLayer`] to repeat.
-    pub layer: L,
-    /// The number of times to repeat it.
-    pub repetitions: u32,
-}
-
-impl<L: NoiseLayerBase> NoiseLayerBase for Repeat<L> {}
-
-impl<I, S, R, L: NoiseLayer<I, S, R>> NoiseLayer<I, S, R> for Repeat<L>
-where
-    Self: NoiseLayerBase,
-{
-    #[inline]
-    fn layer_sample(
-        &self,
-        input: &mut I,
-        seed: &mut SeedGenerator,
-        scale: &mut S,
-        amplitude: &mut impl LayerAmplitude,
-        output: &mut R,
-    ) {
-        for _ in 0..self.repetitions {
-            self.layer
-                .layer_sample(input, seed, scale, amplitude, output);
+        let mut noise = self.builder.build();
+        for _ in 0..self.octaves {
+            noise.set_seed(seed);
+            noise.set_scale(scale.get_next_scale());
+            let octave_result = noise.raw_sample(*input);
+            let amplitude = amplitude.get_next_amplitude();
+            output.accumulate(octave_result, amplitude);
         }
     }
 }
