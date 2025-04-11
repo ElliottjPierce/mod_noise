@@ -6,45 +6,45 @@ use bevy_math::{
 };
 
 use super::{
-    DirectNoise, DirectNoiseBuilder, Noise, NoiseBuilder, NoiseValue,
+    DirectNoise, Noise, NoiseValue,
     periodic::{
         DiferentiablePeriodicPoints, Frequency, Period, PeriodicPoint, PeriodicPoints,
         PeriodicSegment, PowerOf2Period, RelativePeriodicPoint, SamplablePeriodicPoints,
         ScalableNoise, WholePeriod,
     },
-    white::{SeedGenerator, White32},
+    white::White32,
 };
 
 /// A [`ScalableNoise`] that produces [`GridSquare`] using [`PowerOf2Period`].
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct OrthoGridPowerOf2(pub PowerOf2Period);
 
-impl NoiseBuilder<OrthoGridPowerOf2, PowerOf2Period> for DirectNoiseBuilder {
+impl Default for OrthoGridPowerOf2 {
     #[inline]
-    fn build(&self, _seed: &mut SeedGenerator, scale: PowerOf2Period) -> OrthoGridPowerOf2 {
-        OrthoGridPowerOf2(scale)
+    fn default() -> Self {
+        Self(Default::default())
     }
 }
 
 /// A [`ScalableNoise`] that produces [`GridSquare`] using [`WholePeriod`].
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct OrthoGridInteger(pub WholePeriod);
 
-impl NoiseBuilder<OrthoGridInteger, WholePeriod> for DirectNoiseBuilder {
+impl Default for OrthoGridInteger {
     #[inline]
-    fn build(&self, _seed: &mut SeedGenerator, scale: WholePeriod) -> OrthoGridInteger {
-        OrthoGridInteger(scale)
+    fn default() -> Self {
+        Self(Default::default())
     }
 }
 
 /// A [`ScalableNoise`] that produces [`GridSquare`] using [`Frequency`]
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct OrthoGrid(pub Frequency);
 
-impl NoiseBuilder<OrthoGrid, Frequency> for DirectNoiseBuilder {
+impl Default for OrthoGrid {
     #[inline]
-    fn build(&self, _seed: &mut SeedGenerator, scale: Frequency) -> OrthoGrid {
-        OrthoGrid(scale)
+    fn default() -> Self {
+        Self(Default::default())
     }
 }
 

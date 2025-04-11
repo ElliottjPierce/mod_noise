@@ -2,14 +2,12 @@ use super::SIZE;
 use bevy_math::Vec2;
 use criterion::*;
 use mod_noise::noise::{
-    DirectNoise, DirectNoiseBuilder, NoiseBuilderBase, NoiseExt,
+    DefaultAndSet, DirectNoise, NoiseBuilderBase, NoiseExt,
     adapters::Adapter,
     curves::Smoothstep,
     gradient::{QuickGradients, SegmentalGradientNoise},
     grid::OrthoGrid,
-    layering::{
-        FractalNoise, FractalScaling, NoiseLayerBase, NormalizeOctavesInto, ProportionalAmplitude,
-    },
+    layering::{FractalNoise, FractalScaling, NormalizeOctavesInto, ProportionalAmplitude},
     norm::UNorm,
     periodic::{Frequency, Period, TilingNoise},
     white::SeedGenerator,
@@ -57,12 +55,10 @@ pub fn benches(c: &mut Criterion) {
                     finalizer: Adapter::<UNorm>::default(),
                     seed: SeedGenerator::default(),
                     octaves:
-                        DirectNoiseBuilder
-                            .build_octave_for::<Frequency, TilingNoise<
-                                OrthoGrid,
-                                SegmentalGradientNoise<QuickGradients, Smoothstep>,
-                            >>()
-                            .repeat(8),
+                        DefaultAndSet.build_octaves_for::<Frequency, TilingNoise<
+                            OrthoGrid,
+                            SegmentalGradientNoise<QuickGradients, Smoothstep>,
+                        >>(8),
                 };
             bench_2d(noise)
         });

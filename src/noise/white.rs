@@ -5,15 +5,22 @@ use bevy_math::{
     UVec4,
 };
 
-use super::{DirectNoise, DirectNoiseBuilder, Noise, NoiseBuilder, NoiseExt};
+use super::{DirectNoise, Noise, NoiseExt};
 
 /// This creates a white noise implementation
 macro_rules! impl_white {
     ($dt:ty, $name:ident, $key:expr, $(($input:ty, $conv:ty)),* $(,),*) => {
         /// A seeded RNG inspired by [FxHash](https://crates.io/crates/fxhash).
         /// This is similar to a hash function, but does not use std's hash traits, as those produce `u64` outputs only.
-        #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
         pub struct $name(pub $dt);
+
+        impl Default for $name {
+            #[inline]
+            fn default() -> Self {
+                Self(0)
+            }
+        }
 
         impl DirectNoise<$dt> for $name {
             type Output = $dt;
@@ -128,26 +135,12 @@ impl Noise for WhiteUsize {
         self.0 = seed.next_seed() as usize;
     }
 }
-#[cfg(target_pointer_width = "32")]
-impl NoiseBuilder<WhiteUsize, ()> for DirectNoiseBuilder {
-    #[inline]
-    fn build(&self, seed: &mut SeedGenerator, _scale: ()) -> WhiteUsize {
-        WhiteUsize(seed.next_seed() as usize)
-    }
-}
 
 #[cfg(target_pointer_width = "64")]
 impl Noise for WhiteUsize {
     #[inline]
     fn set_seed(&mut self, seed: &mut SeedGenerator) {
         self.0 = White64(0).with_seed(seed).0 as usize;
-    }
-}
-#[cfg(target_pointer_width = "64")]
-impl NoiseBuilder<WhiteUsize, ()> for DirectNoiseBuilder {
-    #[inline]
-    fn build(&self, seed: &mut SeedGenerator, scale: ()) -> WhiteUsize {
-        WhiteUsize(NoiseBuilder::<White64, ()>::build(self, seed, scale).0 as usize)
     }
 }
 
@@ -158,24 +151,10 @@ impl Noise for White8 {
     }
 }
 
-impl NoiseBuilder<White8, ()> for DirectNoiseBuilder {
-    #[inline]
-    fn build(&self, seed: &mut SeedGenerator, _scale: ()) -> White8 {
-        White8(seed.next_seed() as u8)
-    }
-}
-
 impl Noise for White16 {
     #[inline]
     fn set_seed(&mut self, seed: &mut SeedGenerator) {
         self.0 = seed.next_seed() as u16;
-    }
-}
-
-impl NoiseBuilder<White16, ()> for DirectNoiseBuilder {
-    #[inline]
-    fn build(&self, seed: &mut SeedGenerator, _scale: ()) -> White16 {
-        White16(seed.next_seed() as u16)
     }
 }
 
@@ -186,24 +165,10 @@ impl Noise for White32 {
     }
 }
 
-impl NoiseBuilder<White32, ()> for DirectNoiseBuilder {
-    #[inline]
-    fn build(&self, seed: &mut SeedGenerator, _scale: ()) -> White32 {
-        White32(seed.next_seed())
-    }
-}
-
 impl Noise for White64 {
     #[inline]
     fn set_seed(&mut self, seed: &mut SeedGenerator) {
         self.0 = seed.next_seed() as u64 | ((seed.next_seed() as u64) << 32);
-    }
-}
-
-impl NoiseBuilder<White64, ()> for DirectNoiseBuilder {
-    #[inline]
-    fn build(&self, seed: &mut SeedGenerator, _scale: ()) -> White64 {
-        White64(seed.next_seed() as u64 | ((seed.next_seed() as u64) << 32))
     }
 }
 
@@ -214,18 +179,6 @@ impl Noise for White128 {
             | ((seed.next_seed() as u128) << 32)
             | ((seed.next_seed() as u128) << 64)
             | ((seed.next_seed() as u128) << 96);
-    }
-}
-
-impl NoiseBuilder<White128, ()> for DirectNoiseBuilder {
-    #[inline]
-    fn build(&self, seed: &mut SeedGenerator, _scale: ()) -> White128 {
-        White128(
-            seed.next_seed() as u128
-                | ((seed.next_seed() as u128) << 32)
-                | ((seed.next_seed() as u128) << 64)
-                | ((seed.next_seed() as u128) << 96),
-        )
     }
 }
 

@@ -2,10 +2,7 @@
 
 use bevy_math::{Curve, HasTangent, curve::derivatives::SampleDerivative};
 
-use super::{
-    DirectNoise, DirectNoiseBuilder, GradientNoise, Noise, NoiseBuilder, NoiseValue,
-    white::SeedGenerator,
-};
+use super::{DirectNoise, GradientNoise, Noise, NoiseValue, white::SeedGenerator};
 
 /// Represents a [`Noise`] that divides its domain into [`PeriodicSegment`] according to some period `T`.
 pub trait ScalableNoise<T>: Noise {
@@ -196,7 +193,7 @@ impl Default for PowerOf2Period {
 
 /// Represents slicing a domain into [`PeriodicSegment`]s via `P` and then computing noise within segments via `N`.
 /// The noise itself may not tile in the traditional sense, but it is composed of tiles of noise.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TilingNoise<P, N> {
     /// The noise for making the [`PeriodicSegment`]s.
     pub tilier: P,
@@ -212,15 +209,12 @@ impl<P: Noise, N: Noise> Noise for TilingNoise<P, N> {
     }
 }
 
-impl<S, P: ScalableNoise<S>, N: Noise> NoiseBuilder<TilingNoise<P, N>, S> for DirectNoiseBuilder
-where
-    Self: NoiseBuilder<N, ()> + NoiseBuilder<P, S>,
-{
+impl<P: Default, N: Default> Default for TilingNoise<P, N> {
     #[inline]
-    fn build(&self, seed: &mut SeedGenerator, scale: S) -> TilingNoise<P, N> {
-        TilingNoise {
-            tilier: NoiseBuilder::<P, S>::build(self, seed, scale),
-            tile: NoiseBuilder::<N, ()>::build(self, seed, ()),
+    fn default() -> Self {
+        Self {
+            tilier: P::default(),
+            tile: N::default(),
         }
     }
 }

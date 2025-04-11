@@ -8,7 +8,7 @@ use bevy_math::{
 };
 
 use super::{
-    DirectNoise, DirectNoiseBuilder, GradientNoise, Noise, NoiseBuilder, NoiseValue,
+    DirectNoise, GradientNoise, Noise, NoiseValue,
     norm::UNorm,
     periodic::{
         DiferentiablePeriodicPoints, PeriodicPoint, PeriodicSegment, SamplablePeriodicPoints,
@@ -37,7 +37,7 @@ pub trait GradientGenerator<I: NoiseValue>: Noise {
 /// and the resulting noise is formed by interpolating the dot product of the gradient with the relative position of the sample point.
 ///
 /// This can be used to make perlin noise, etc.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SegmentalGradientNoise<G, C> {
     /// A [`GradientGenerator`] that produces the gradient vectors.
     pub gradients: G,
@@ -48,25 +48,22 @@ pub struct SegmentalGradientNoise<G, C> {
     pub seed: u32,
 }
 
+impl<G: Default, C: Default> Default for SegmentalGradientNoise<G, C> {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            gradients: G::default(),
+            smoothing_curve: C::default(),
+            seed: 0,
+        }
+    }
+}
+
 impl<N: Noise, C: Curve<f32> + Send + Sync> Noise for SegmentalGradientNoise<N, C> {
     #[inline]
     fn set_seed(&mut self, seed: &mut SeedGenerator) {
         self.seed = seed.next_seed();
         self.gradients.set_seed(seed);
-    }
-}
-
-impl<G: Noise, C: Default> NoiseBuilder<SegmentalGradientNoise<G, C>, ()> for DirectNoiseBuilder
-where
-    Self: NoiseBuilder<G, ()>,
-{
-    #[inline]
-    fn build(&self, seed: &mut SeedGenerator, _scale: ()) -> SegmentalGradientNoise<G, C> {
-        SegmentalGradientNoise {
-            gradients: NoiseBuilder::<G, ()>::build(self, seed, ()),
-            seed: seed.next_seed(),
-            smoothing_curve: C::default(),
-        }
     }
 }
 
@@ -145,17 +142,17 @@ impl<
 /// A simple [`GradientGenerator`] that uses white noise to generate each element of the gradient independently.
 ///
 /// This does not correct for the bunching of directions caused by normalizing.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RandomElementGradients;
 
-impl Noise for RandomElementGradients {}
-
-impl NoiseBuilder<RandomElementGradients, ()> for DirectNoiseBuilder {
+impl Default for RandomElementGradients {
     #[inline]
-    fn build(&self, _seed: &mut SeedGenerator, _scale: ()) -> RandomElementGradients {
-        RandomElementGradients
+    fn default() -> Self {
+        Self
     }
 }
+
+impl Noise for RandomElementGradients {}
 
 impl GradientGenerator<Vec2> for RandomElementGradients {
     #[inline]
@@ -295,15 +292,15 @@ impl<T: GradElementGenerator + Noise> GradientGenerator<Vec4> for T {
 /// This is the fastest provided [`GradientGenerator`].
 ///
 /// This does not correct for the bunching of directions caused by normalizing.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct QuickGradients;
 
 impl Noise for QuickGradients {}
 
-impl NoiseBuilder<QuickGradients, ()> for DirectNoiseBuilder {
+impl Default for QuickGradients {
     #[inline]
-    fn build(&self, _seed: &mut SeedGenerator, _scale: ()) -> QuickGradients {
-        QuickGradients
+    fn default() -> Self {
+        Self
     }
 }
 
@@ -321,15 +318,15 @@ impl GradElementGenerator for QuickGradients {
 /// This approximately corrects for the bunching of directions caused by normalizing.
 /// To do so, it maps it's distribution of points onto a cubic curve that distributes more values near ±0.5.
 /// That reduces the directional artifacts caused by higher densities of gradients in corners which are mapped to similar directions.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ApproximateUniformGradients;
 
 impl Noise for ApproximateUniformGradients {}
 
-impl NoiseBuilder<ApproximateUniformGradients, ()> for DirectNoiseBuilder {
+impl Default for ApproximateUniformGradients {
     #[inline]
-    fn build(&self, _seed: &mut SeedGenerator, _scale: ()) -> ApproximateUniformGradients {
-        ApproximateUniformGradients
+    fn default() -> Self {
+        Self
     }
 }
 

@@ -2,7 +2,7 @@
 
 use core::marker::PhantomData;
 
-use layering::Octave;
+use layering::Octaves;
 use periodic::ScalableNoise;
 use white::SeedGenerator;
 
@@ -177,23 +177,24 @@ impl_noise_value!(
     bevy_math::IVec4,
 );
 
-/// Manages building a [`Noise`] `N` for an octave. If the noise type is not [`ScalableNoise`], `()` can be used for `S`.
-pub trait NoiseBuilder<N, S>: NoiseBuilderBase {
+/// Manages building a [`Noise`] `N` for an octave.
+pub trait NoiseBuilder<N>: NoiseBuilderBase {
     /// Constructs a [`Noise`] `N` with a seed.
-    fn build(&self, seed: &mut SeedGenerator, scale: S) -> N;
+    fn build(&self) -> N;
 }
 
 /// Represents the root of all [`OctaveNoiseBuilder`].
 pub trait NoiseBuilderBase: Send + Sync + Sized {
     /// Creates an [`Octave`] for [`Noise`] `N` and scale `S`.
     #[inline]
-    fn build_octave_for<S, N>(self) -> Octave<N, S, Self>
+    fn build_octaves_for<S, N: ScalableNoise<S>>(self, octaves: u32) -> Octaves<N, S, Self>
     where
-        Self: NoiseBuilder<N, S>,
+        Self: NoiseBuilder<N>,
     {
-        Octave {
+        Octaves {
             builder: self,
             marker: PhantomData,
+            octaves,
         }
     }
 }
@@ -204,13 +205,10 @@ pub struct DefaultAndSet;
 
 impl NoiseBuilderBase for DefaultAndSet {}
 
-impl<S, N: Default + ScalableNoise<S>> NoiseBuilder<N, S> for DefaultAndSet {
+impl<N: Default> NoiseBuilder<N> for DefaultAndSet {
     #[inline]
-    fn build(&self, seed: &mut SeedGenerator, scale: S) -> N {
-        let mut noise = N::default();
-        noise.set_seed(seed);
-        noise.set_scale(scale);
-        noise
+    fn build(&self) -> N {
+        N::default()
     }
 }
 
@@ -222,23 +220,12 @@ pub struct CloneAndSet<N>(pub N);
 
 impl<N: Clone + Noise> NoiseBuilderBase for CloneAndSet<N> {}
 
-impl<S, N: Clone + ScalableNoise<S>> NoiseBuilder<N, S> for CloneAndSet<N> {
+impl<N: Clone + Noise> NoiseBuilder<N> for CloneAndSet<N> {
     #[inline]
-    fn build(&self, seed: &mut SeedGenerator, scale: S) -> N {
-        let mut noise = self.0.clone();
-        noise.set_seed(seed);
-        noise.set_scale(scale);
-        noise
+    fn build(&self) -> N {
+        self.0.clone()
     }
 }
-
-/// A [`OctaveNoiseBuilderBase`] that users can use to implement high performance [`OctaveNoiseBuilder`] for their noise.
-/// Most noise types should implement [`OctaveNoiseBuilder`] for this type. If the noise type is not [`ScalableNoise`], `()` can be used for `S`.
-/// This is a good default.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub struct DirectNoiseBuilder;
-
-impl NoiseBuilderBase for DirectNoiseBuilder {}
 
 #[cfg(test)]
 mod tests {

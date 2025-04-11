@@ -1,14 +1,14 @@
 //! Contains logic for cellular noise, including ones not based on voronoi graphs.
 
 use super::{
-    DirectNoise, DirectNoiseBuilder, Noise, NoiseBuilder,
+    DirectNoise, Noise,
     periodic::{PeriodicPoint, PeriodicSegment},
     white::SeedGenerator,
 };
 
 /// Represents cell noise over some [`DirectNoise<u32>`](DirectNoise) `N`.
 /// When given a [`PeriodicSegment`], this will pass the segment's main point's seed into the noise.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CellNoise<N> {
     /// The inner noise used.
     pub noise: N,
@@ -24,19 +24,15 @@ impl<N: Noise> Noise for CellNoise<N> {
     }
 }
 
-impl<N: Noise> NoiseBuilder<CellNoise<N>, ()> for DirectNoiseBuilder
-where
-    Self: NoiseBuilder<N, ()>,
-{
+impl<N: Default> Default for CellNoise<N> {
     #[inline]
-    fn build(&self, seed: &mut SeedGenerator, _scale: ()) -> CellNoise<N> {
-        CellNoise {
-            noise: NoiseBuilder::<N, ()>::build(self, seed, ()),
-            seed: seed.next_seed(),
+    fn default() -> Self {
+        Self {
+            noise: N::default(),
+            seed: 0,
         }
     }
 }
-
 impl<T: PeriodicSegment, N: DirectNoise<u32>> DirectNoise<T> for CellNoise<N> {
     type Output = N::Output;
 

@@ -8,7 +8,7 @@ use bevy_math::{
 };
 
 use super::{
-    DirectNoise, DirectNoiseBuilder, GradientNoise, Noise, NoiseBuilder,
+    DirectNoise, GradientNoise, Noise,
     periodic::{
         DiferentiablePeriodicPoints, PeriodicPoint, PeriodicSegment, SamplablePeriodicPoints,
     },
@@ -16,7 +16,7 @@ use super::{
 };
 
 /// Represents some noise on the [`PeriodicPoint`]s of a [`PeriodicSegment`] where values between those points are smoothed out accordingly.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SegmentalValueNoise<N, C> {
     /// The noise for each of the [`PeriodicPoint`]s.
     pub noise: N,
@@ -27,26 +27,22 @@ pub struct SegmentalValueNoise<N, C> {
     pub seed: u32,
 }
 
+impl<N: Default, C: Default> Default for SegmentalValueNoise<N, C> {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            noise: N::default(),
+            smoothing_curve: C::default(),
+            seed: 0,
+        }
+    }
+}
+
 impl<N: Noise, C: Curve<f32> + Send + Sync> Noise for SegmentalValueNoise<N, C> {
     #[inline]
     fn set_seed(&mut self, seed: &mut SeedGenerator) {
         self.seed = seed.next_seed();
         self.noise.set_seed(seed);
-    }
-}
-
-impl<N: Noise, C: Curve<f32> + Default> NoiseBuilder<SegmentalValueNoise<N, C>, ()>
-    for DirectNoiseBuilder
-where
-    Self: NoiseBuilder<N, ()>,
-{
-    #[inline]
-    fn build(&self, seed: &mut SeedGenerator, _scale: ()) -> SegmentalValueNoise<N, C> {
-        SegmentalValueNoise {
-            noise: NoiseBuilder::<N, ()>::build(self, seed, ()),
-            smoothing_curve: C::default(),
-            seed: seed.next_seed(),
-        }
     }
 }
 
