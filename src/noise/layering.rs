@@ -337,34 +337,23 @@ impl LayerAmplitude for ProportionalAmplitude {
     }
 }
 
-/// Represents a direct octave of `N` noise via scale `S` and source `F`.
+/// Represents a "normal" octave of noise built from a [`OctaveNoiseBuilder`] `B`, which builds a [`Noise`] `N` that is a [`ScalableNoise<S>`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Octave<N, S, F: Fn(&mut SeedGenerator) -> N> {
-    /// The means by which `N` is created for each octave.
-    pub generator: F,
-    /// Marker data. `N` specifies the expected [`Noise`] type, and `S` specifies the scale to use on it.
+pub struct Octave<N, S, B> {
+    /// The [`OctaveNoiseBuilder`]
+    pub builder: B,
+    /// Marker data for [`Noise`] `N` that is a [`ScalableNoise<S>`].
     pub marker: PhantomData<(N, S)>,
-}
-
-impl<N, S, F: Fn(&mut SeedGenerator) -> N> Octave<N, S, F> {
-    /// Creates a new [`Octave`] with the given generator.
-    #[inline]
-    pub fn new(generator: F) -> Self {
-        Self {
-            generator,
-            marker: PhantomData,
-        }
-    }
 }
 
 impl<
     I: Copy,
     NS,
-    N: DirectNoise<I> + ScalableNoise<NS>,
+    N: DirectNoise<I>,
     R: LayerAccumulator<N::Output>,
     S: LayerScale<NS>,
-    F: Fn(&mut SeedGenerator) -> N,
-> NoiseLayer<I, S, R> for Octave<N, NS, F>
+    B: OctaveNoiseBuilder<N, NS>,
+> NoiseLayer<I, S, R> for Octave<N, NS, B>
 where
     Self: Send + Sync,
 {
@@ -377,8 +366,7 @@ where
         amplitude: &mut impl LayerAmplitude,
         output: &mut R,
     ) {
-        let mut noise = (self.generator)(seed);
-        noise.set_scale(scale.get_next_scale());
+        let noise = self.builder.build(seed, scale.get_next_scale());
         let octave_result = noise.raw_sample(*input);
         let amplitude = amplitude.get_next_amplitude();
         output.accumulate(octave_result, amplitude);
@@ -422,5 +410,42 @@ where
             self.layer
                 .layer_sample(input, seed, scale, amplitude, output);
         }
+    }
+}
+
+/// Manages building a [`Noise`] `N` for an octave.
+pub trait OctaveNoiseBuilder<N, S>: OctaveNoiseBuilderBase {
+    /// Constructs a [`Noise`] `N` with a seed.
+    fn build(&self, seed: &mut SeedGenerator, scale: S) -> N;
+}
+
+/// Represents the root of all [`OctaveNoiseBuilder`].
+pub trait OctaveNoiseBuilderBase: Send + Sync + Sized {
+    /// Creates an [`Octave`] for [`Noise`] `N` and scale `S`.
+    #[inline]
+    fn build_octave<N, S>(self) -> Octave<N, S, Self>
+    where
+        Self: OctaveNoiseBuilder<N, S>,
+    {
+        Octave {
+            builder: self,
+            marker: PhantomData,
+        }
+    }
+}
+
+/// A [`OctaveNoiseBuilder`] for any noise that implements [`Default`] and [`ScalableNoise`].
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct DefaultAndSet;
+
+impl OctaveNoiseBuilderBase for DefaultAndSet {}
+
+impl<S, N: Default + ScalableNoise<S>> OctaveNoiseBuilder<N, S> for DefaultAndSet {
+    #[inline]
+    fn build(&self, seed: &mut SeedGenerator, scale: S) -> N {
+        let mut noise = N::default();
+        noise.set_seed(seed);
+        noise.set_scale(scale);
+        noise
     }
 }
