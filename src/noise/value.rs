@@ -8,7 +8,7 @@ use bevy_math::{
 };
 
 use super::{
-    DirectNoise, GradientNoise, Noise,
+    DirectNoise, DirectNoiseBuilder, GradientNoise, Noise, NoiseBuilder,
     periodic::{
         DiferentiablePeriodicPoints, PeriodicPoint, PeriodicSegment, SamplablePeriodicPoints,
     },
@@ -32,6 +32,21 @@ impl<N: Noise, C: Curve<f32> + Send + Sync> Noise for SegmentalValueNoise<N, C> 
     fn set_seed(&mut self, seed: &mut SeedGenerator) {
         self.seed = seed.next_seed();
         self.noise.set_seed(seed);
+    }
+}
+
+impl<N: Noise, C: Curve<f32> + Default> NoiseBuilder<SegmentalValueNoise<N, C>, ()>
+    for DirectNoiseBuilder
+where
+    Self: NoiseBuilder<N, ()>,
+{
+    #[inline]
+    fn build(&self, seed: &mut SeedGenerator, _scale: ()) -> SegmentalValueNoise<N, C> {
+        SegmentalValueNoise {
+            noise: NoiseBuilder::<N, ()>::build(self, seed, ()),
+            smoothing_curve: C::default(),
+            seed: seed.next_seed(),
+        }
     }
 }
 

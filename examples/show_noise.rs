@@ -6,7 +6,7 @@ use bevy::{
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
 use mod_noise::noise::{
-    PeriodicNoise,
+    DirectNoiseBuilder, NoiseBuilderBase, PeriodicNoise,
     adapters::Adapter,
     cellular::CellNoise,
     curves::{Linear, Smoothstep},
@@ -15,8 +15,7 @@ use mod_noise::noise::{
     },
     grid::OrthoGrid,
     layering::{
-        DefaultAndSet, FractalNoise, FractalScaling, NoiseLayerBase, NormalizeOctavesInto,
-        OctaveNoiseBuilderBase, ProportionalAmplitude,
+        FractalNoise, FractalScaling, NoiseLayerBase, NormalizeOctavesInto, ProportionalAmplitude,
     },
     norm::UNorm,
     periodic::{Frequency, Period, TilingNoise},
@@ -152,7 +151,7 @@ fn main() -> AppExit {
                                 result: NormalizeOctavesInto::<f32>::default(),
                                 finalizer: Adapter::<UNorm>::default(),
                                 seed: SeedGenerator::default(),
-                                octaves: DefaultAndSet
+                                octaves: DirectNoiseBuilder
                                     .build_octave::<TilingNoise<
                                         OrthoGrid,
                                         SegmentalGradientNoise<

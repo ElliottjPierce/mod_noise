@@ -6,26 +6,47 @@ use bevy_math::{
 };
 
 use super::{
-    DirectNoise, Noise, NoiseValue,
+    DirectNoise, DirectNoiseBuilder, Noise, NoiseBuilder, NoiseValue,
     periodic::{
         DiferentiablePeriodicPoints, Frequency, Period, PeriodicPoint, PeriodicPoints,
         PeriodicSegment, PowerOf2Period, RelativePeriodicPoint, SamplablePeriodicPoints,
         ScalableNoise, WholePeriod,
     },
-    white::White32,
+    white::{SeedGenerator, White32},
 };
 
 /// A [`ScalableNoise`] that produces [`GridSquare`] using [`PowerOf2Period`].
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct OrthoGridPowerOf2(pub PowerOf2Period);
 
+impl NoiseBuilder<OrthoGridPowerOf2, PowerOf2Period> for DirectNoiseBuilder {
+    #[inline]
+    fn build(&self, _seed: &mut SeedGenerator, scale: PowerOf2Period) -> OrthoGridPowerOf2 {
+        OrthoGridPowerOf2(scale)
+    }
+}
+
 /// A [`ScalableNoise`] that produces [`GridSquare`] using [`WholePeriod`].
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct OrthoGridInteger(pub WholePeriod);
 
+impl NoiseBuilder<OrthoGridInteger, WholePeriod> for DirectNoiseBuilder {
+    #[inline]
+    fn build(&self, _seed: &mut SeedGenerator, scale: WholePeriod) -> OrthoGridInteger {
+        OrthoGridInteger(scale)
+    }
+}
+
 /// A [`ScalableNoise`] that produces [`GridSquare`] using [`Frequency`]
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct OrthoGrid(pub Frequency);
+
+impl NoiseBuilder<OrthoGrid, Frequency> for DirectNoiseBuilder {
+    #[inline]
+    fn build(&self, _seed: &mut SeedGenerator, scale: Frequency) -> OrthoGrid {
+        OrthoGrid(scale)
+    }
+}
 
 /// Represents a grid square.
 #[derive(Debug, Clone, Copy, PartialEq)]
