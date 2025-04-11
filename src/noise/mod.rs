@@ -187,7 +187,7 @@ pub trait NoiseBuilder<N, S>: NoiseBuilderBase {
 pub trait NoiseBuilderBase: Send + Sync + Sized {
     /// Creates an [`Octave`] for [`Noise`] `N` and scale `S`.
     #[inline]
-    fn build_octave<N, S>(self) -> Octave<N, S, Self>
+    fn build_octave_for<S, N>(self) -> Octave<N, S, Self>
     where
         Self: NoiseBuilder<N, S>,
     {

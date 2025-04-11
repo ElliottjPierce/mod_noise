@@ -151,15 +151,23 @@ fn main() -> AppExit {
                                 result: NormalizeOctavesInto::<f32>::default(),
                                 finalizer: Adapter::<UNorm>::default(),
                                 seed: SeedGenerator::default(),
-                                octaves: DirectNoiseBuilder
-                                    .build_octave::<TilingNoise<
-                                        OrthoGrid,
-                                        SegmentalGradientNoise<
-                                            ApproximateUniformGradients,
-                                            Smoothstep,
-                                        >,
-                                    >, Frequency>()
-                                    .repeat(8),
+                                octaves: (
+                                    DirectNoiseBuilder
+                                        .build_octave_for::<Frequency, TilingNoise<
+                                            OrthoGrid,
+                                            SegmentalGradientNoise<
+                                                ApproximateUniformGradients,
+                                                Smoothstep,
+                                            >,
+                                        >>()
+                                        .repeat(2),
+                                    DirectNoiseBuilder
+                                        .build_octave_for::<Frequency, TilingNoise<
+                                            OrthoGrid,
+                                            SegmentalGradientNoise<QuickGradients, Smoothstep>,
+                                        >>()
+                                        .repeat(6),
+                                ),
                             }),
                         },
                     ],
