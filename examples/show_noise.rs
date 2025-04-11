@@ -6,7 +6,7 @@ use bevy::{
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
 use mod_noise::noise::{
-    NoiseExt, PeriodicNoise,
+    DirectNoiseBuilder, NoiseBuilderBase, PeriodicNoise,
     adapters::Adapter,
     cellular::CellNoise,
     curves::{Linear, Smoothstep},
@@ -15,7 +15,7 @@ use mod_noise::noise::{
     },
     grid::OrthoGrid,
     layering::{
-        FractalNoise, FractalScaling, NormalizeOctavesInto, Octave, ProportionalAmplitude, Repeat,
+        FractalNoise, FractalScaling, NoiseLayerBase, NormalizeOctavesInto, ProportionalAmplitude,
     },
     norm::UNorm,
     periodic::{Frequency, Period, TilingNoise},
@@ -151,16 +151,22 @@ fn main() -> AppExit {
                                 result: NormalizeOctavesInto::<f32>::default(),
                                 finalizer: Adapter::<UNorm>::default(),
                                 seed: SeedGenerator::default(),
-                                octaves: Repeat::new(
-                                    8,
-                                    Octave::<_, Frequency, _>::new(TilingNoise::<
-                                        OrthoGrid,
-                                        SegmentalGradientNoise<
-                                            ApproximateUniformGradients,
-                                            Smoothstep,
-                                        >,
-                                    >::default_with_seed(
-                                    )),
+                                octaves: (
+                                    DirectNoiseBuilder
+                                        .build_octave_for::<Frequency, TilingNoise<
+                                            OrthoGrid,
+                                            SegmentalGradientNoise<
+                                                ApproximateUniformGradients,
+                                                Smoothstep,
+                                            >,
+                                        >>()
+                                        .repeat(2),
+                                    DirectNoiseBuilder
+                                        .build_octave_for::<Frequency, TilingNoise<
+                                            OrthoGrid,
+                                            SegmentalGradientNoise<QuickGradients, Smoothstep>,
+                                        >>()
+                                        .repeat(6),
                                 ),
                             }),
                         },

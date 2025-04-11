@@ -2,19 +2,30 @@
 
 use core::marker::PhantomData;
 
-use super::{CorolatedNoiseType, DirectNoise, Noise, NoiseValue};
+use super::{
+    CorolatedNoiseType, DirectNoise, DirectNoiseBuilder, Noise, NoiseBuilder, NoiseValue,
+    white::SeedGenerator,
+};
 
 /// A [`DirectNoise`] that converts one [`NoiseValue`] to another.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Adapter<T>(pub PhantomData<T>);
 
 impl<T> Default for Adapter<T> {
+    #[inline]
     fn default() -> Self {
         Self(PhantomData)
     }
 }
 
 impl<T: Send + Sync> Noise for Adapter<T> {}
+
+impl<T> NoiseBuilder<Adapter<T>, ()> for DirectNoiseBuilder {
+    #[inline]
+    fn build(&self, _seed: &mut SeedGenerator, _scale: ()) -> Adapter<T> {
+        Adapter(PhantomData)
+    }
+}
 
 macro_rules! impl_adapter {
     ($l:ident->$o:ident, $($p:ident->$t:ident),*) => {

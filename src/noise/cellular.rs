@@ -1,7 +1,7 @@
 //! Contains logic for cellular noise, including ones not based on voronoi graphs.
 
 use super::{
-    DirectNoise, Noise,
+    DirectNoise, DirectNoiseBuilder, Noise, NoiseBuilder,
     periodic::{PeriodicPoint, PeriodicSegment},
     white::SeedGenerator,
 };
@@ -21,6 +21,19 @@ impl<N: Noise> Noise for CellNoise<N> {
     fn set_seed(&mut self, seed: &mut SeedGenerator) {
         self.seed = seed.next_seed();
         self.noise.set_seed(seed);
+    }
+}
+
+impl<N: Noise> NoiseBuilder<CellNoise<N>, ()> for DirectNoiseBuilder
+where
+    Self: NoiseBuilder<N, ()>,
+{
+    #[inline]
+    fn build(&self, seed: &mut SeedGenerator, _scale: ()) -> CellNoise<N> {
+        CellNoise {
+            noise: NoiseBuilder::<N, ()>::build(self, seed, ()),
+            seed: seed.next_seed(),
+        }
     }
 }
 

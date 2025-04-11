@@ -8,7 +8,7 @@ use bevy_math::{
 };
 
 use super::{
-    DirectNoise, GradientNoise, Noise, NoiseValue,
+    DirectNoise, DirectNoiseBuilder, GradientNoise, Noise, NoiseBuilder, NoiseValue,
     norm::UNorm,
     periodic::{
         DiferentiablePeriodicPoints, PeriodicPoint, PeriodicSegment, SamplablePeriodicPoints,
@@ -53,6 +53,20 @@ impl<N: Noise, C: Curve<f32> + Send + Sync> Noise for SegmentalGradientNoise<N, 
     fn set_seed(&mut self, seed: &mut SeedGenerator) {
         self.seed = seed.next_seed();
         self.gradients.set_seed(seed);
+    }
+}
+
+impl<G: Noise, C: Default> NoiseBuilder<SegmentalGradientNoise<G, C>, ()> for DirectNoiseBuilder
+where
+    Self: NoiseBuilder<G, ()>,
+{
+    #[inline]
+    fn build(&self, seed: &mut SeedGenerator, _scale: ()) -> SegmentalGradientNoise<G, C> {
+        SegmentalGradientNoise {
+            gradients: NoiseBuilder::<G, ()>::build(self, seed, ()),
+            seed: seed.next_seed(),
+            smoothing_curve: C::default(),
+        }
     }
 }
 
@@ -135,6 +149,13 @@ impl<
 pub struct RandomElementGradients;
 
 impl Noise for RandomElementGradients {}
+
+impl NoiseBuilder<RandomElementGradients, ()> for DirectNoiseBuilder {
+    #[inline]
+    fn build(&self, _seed: &mut SeedGenerator, _scale: ()) -> RandomElementGradients {
+        RandomElementGradients
+    }
+}
 
 impl GradientGenerator<Vec2> for RandomElementGradients {
     #[inline]
@@ -279,6 +300,13 @@ pub struct QuickGradients;
 
 impl Noise for QuickGradients {}
 
+impl NoiseBuilder<QuickGradients, ()> for DirectNoiseBuilder {
+    #[inline]
+    fn build(&self, _seed: &mut SeedGenerator, _scale: ()) -> QuickGradients {
+        QuickGradients
+    }
+}
+
 impl GradElementGenerator for QuickGradients {
     #[inline]
     fn get_element(&self, seed: u8) -> f32 {
@@ -297,6 +325,13 @@ impl GradElementGenerator for QuickGradients {
 pub struct ApproximateUniformGradients;
 
 impl Noise for ApproximateUniformGradients {}
+
+impl NoiseBuilder<ApproximateUniformGradients, ()> for DirectNoiseBuilder {
+    #[inline]
+    fn build(&self, _seed: &mut SeedGenerator, _scale: ()) -> ApproximateUniformGradients {
+        ApproximateUniformGradients
+    }
+}
 
 impl GradElementGenerator for ApproximateUniformGradients {
     #[inline]

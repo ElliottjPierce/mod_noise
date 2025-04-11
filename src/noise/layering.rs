@@ -6,7 +6,7 @@ use core::{
 };
 
 use super::{
-    CorolatedNoiseType, DirectNoise, Noise, NoiseValue,
+    CorolatedNoiseType, DirectNoise, Noise, NoiseBuilder, NoiseBuilderBase, NoiseValue,
     periodic::{Frequency, Period, ScalableNoise, WholePeriod},
     white::SeedGenerator,
 };
@@ -48,9 +48,35 @@ pub trait LayerScale<S>: Send + Sync {
     fn multiply_scale(&mut self, multiplier: S);
 }
 
+/// A root for [`NoiseLayer`].
+pub trait NoiseLayerBase: Send + Sync {
+    /// Repeats this octave `times` many times via [`Repeat`].
+    #[inline]
+    fn repeat(self, times: u32) -> Repeat<Self>
+    where
+        Self: Sized,
+    {
+        Repeat {
+            layer: self,
+            repetitions: times,
+        }
+    }
+
+    /// `next_octave` will come after this one.
+    /// This is done via tuples.
+    /// Note that it is often cleaner to specify layers via `(Layer1, Layer2, Layer3, ...)`
+    #[inline]
+    fn and_then<N: NoiseLayerBase>(self, next_octave: N) -> (Self, N)
+    where
+        Self: Sized,
+    {
+        (self, next_octave)
+    }
+}
+
 /// Represents a layer of some [`LayeredNoise`].
 /// Each layer builds on the last, producing a composition of various noises.
-pub trait NoiseLayer<I, S, R>: Send + Sync {
+pub trait NoiseLayer<I, S, R>: NoiseLayerBase {
     /// Samples this layer of noise.
     /// This should use the `input` to [`LayerAccumulator::accumulate`] into the `output`.
     /// This may also progress `seed`, `scale`, and `amplitude`.
@@ -66,6 +92,8 @@ pub trait NoiseLayer<I, S, R>: Send + Sync {
 
 macro_rules! impl_layers {
     ($($t:ident=$f:tt),+) => {
+        impl<$($t: NoiseLayerBase),+> NoiseLayerBase for ($($t,)+) { }
+
         impl<I, S, R, $($t: NoiseLayer<I, S, R>,)+> NoiseLayer<I, S, R> for ($($t,)+) {
             #[inline]
             fn layer_sample(
@@ -337,36 +365,27 @@ impl LayerAmplitude for ProportionalAmplitude {
     }
 }
 
-/// Represents a direct octave of `N` noise via scale `S` and source `F`.
+/// Represents a "normal" octave of noise built from a [`OctaveNoiseBuilder`] `B`, which builds a [`Noise`] `N` that is a [`ScalableNoise<S>`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Octave<N, S, F: Fn(&mut SeedGenerator) -> N> {
-    /// The means by which `N` is created for each octave.
-    pub generator: F,
-    /// Marker data. `N` specifies the expected [`Noise`] type, and `S` specifies the scale to use on it.
+pub struct Octave<N, S, B> {
+    /// The [`OctaveNoiseBuilder`]
+    pub builder: B,
+    /// Marker data for [`Noise`] `N` that is a [`ScalableNoise<S>`].
     pub marker: PhantomData<(N, S)>,
 }
 
-impl<N, S, F: Fn(&mut SeedGenerator) -> N> Octave<N, S, F> {
-    /// Creates a new [`Octave`] with the given generator.
-    #[inline]
-    pub fn new(generator: F) -> Self {
-        Self {
-            generator,
-            marker: PhantomData,
-        }
-    }
-}
+impl<N, S, B: NoiseBuilderBase> NoiseLayerBase for Octave<N, S, B> where Self: Send + Sync {}
 
 impl<
     I: Copy,
     NS,
-    N: DirectNoise<I> + ScalableNoise<NS>,
+    N: DirectNoise<I>,
     R: LayerAccumulator<N::Output>,
     S: LayerScale<NS>,
-    F: Fn(&mut SeedGenerator) -> N,
-> NoiseLayer<I, S, R> for Octave<N, NS, F>
+    B: NoiseBuilder<N, NS>,
+> NoiseLayer<I, S, R> for Octave<N, NS, B>
 where
-    Self: Send + Sync,
+    Self: NoiseLayerBase,
 {
     #[inline]
     fn layer_sample(
@@ -377,8 +396,7 @@ where
         amplitude: &mut impl LayerAmplitude,
         output: &mut R,
     ) {
-        let mut noise = (self.generator)(seed);
-        noise.set_scale(scale.get_next_scale());
+        let noise = self.builder.build(seed, scale.get_next_scale());
         let octave_result = noise.raw_sample(*input);
         let amplitude = amplitude.get_next_amplitude();
         output.accumulate(octave_result, amplitude);
@@ -394,20 +412,11 @@ pub struct Repeat<L> {
     pub repetitions: u32,
 }
 
-impl<L> Repeat<L> {
-    /// Constructs a new [`Repeat`].
-    #[inline]
-    pub fn new(times: u32, layer: L) -> Self {
-        Self {
-            layer,
-            repetitions: times,
-        }
-    }
-}
+impl<L: NoiseLayerBase> NoiseLayerBase for Repeat<L> {}
 
 impl<I, S, R, L: NoiseLayer<I, S, R>> NoiseLayer<I, S, R> for Repeat<L>
 where
-    Self: Send + Sync,
+    Self: NoiseLayerBase,
 {
     #[inline]
     fn layer_sample(
