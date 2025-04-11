@@ -2,12 +2,17 @@ use super::SIZE;
 use bevy_math::Vec2;
 use criterion::*;
 use mod_noise::noise::{
-    DirectNoise, NoiseExt,
+    DirectNoise, DirectNoiseBuilder, NoiseBuilderBase, NoiseExt,
+    adapters::Adapter,
     curves::Smoothstep,
     gradient::{QuickGradients, SegmentalGradientNoise},
     grid::OrthoGrid,
+    layering::{
+        FractalNoise, FractalScaling, NoiseLayerBase, NormalizeOctavesInto, ProportionalAmplitude,
+    },
     norm::UNorm,
-    periodic::{Period, TilingNoise},
+    periodic::{Frequency, Period, TilingNoise},
+    white::SeedGenerator,
 };
 
 #[inline]
@@ -32,6 +37,33 @@ pub fn benches(c: &mut Criterion) {
                 OrthoGrid,
                 SegmentalGradientNoise<QuickGradients, Smoothstep>,
             >::default().with_period(Period(32.0));
+            bench_2d(noise)
+        });
+    });
+
+    group.bench_function("fbm 8 octave perlin", |bencher| {
+        bencher.iter(|| {
+            let noise =
+                FractalNoise {
+                    scale: FractalScaling {
+                        overall: Period(32.0).into(),
+                        gain: 2.0,
+                    },
+                    amplitude: ProportionalAmplitude {
+                        proportion: 0.5,
+                        ..Default::default()
+                    },
+                    result: NormalizeOctavesInto::<f32>::default(),
+                    finalizer: Adapter::<UNorm>::default(),
+                    seed: SeedGenerator::default(),
+                    octaves:
+                        DirectNoiseBuilder
+                            .build_octave_for::<Frequency, TilingNoise<
+                                OrthoGrid,
+                                SegmentalGradientNoise<QuickGradients, Smoothstep>,
+                            >>()
+                            .repeat(8),
+                };
             bench_2d(noise)
         });
     });
