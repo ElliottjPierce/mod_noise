@@ -2,10 +2,7 @@
 
 use core::ops::{Mul, MulAssign};
 
-use bevy_math::{
-    Curve,
-    curve::{Ease, FunctionCurve, Interval},
-};
+use bevy_math::{Curve, curve::Interval};
 
 use super::{
     CorolatedNoiseType, NoiseValue,
@@ -109,12 +106,5 @@ impl Lerpable for UNorm {
     #[inline]
     fn lerp_to(self, end: Self) -> impl Curve<Self> {
         NormLerpCurve(LerpCurve::new(self.0, end.0))
-    }
-}
-
-impl Ease for UNorm {
-    fn interpolating_curve_unbounded(start: Self, end: Self) -> impl Curve<Self> {
-        let slope = end.0 - start.0;
-        FunctionCurve::new(Interval::UNIT, move |t| Self(start.0 + slope * t))
     }
 }
