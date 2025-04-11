@@ -9,8 +9,14 @@ bevy_math = { version = "0.16.0-rc.3", default-features = false, features = [
 ] }
 
 [dev-dependencies]
+# for examples
 bevy = "0.16.0-rc.3"
+
+# For benches
 criterion = "0.5"
+fastnoise-lite = "1.1"
+noise = "0.9"
+libnoise = "1.1"
 
 [features]
 default = ["nostd-libm"]
