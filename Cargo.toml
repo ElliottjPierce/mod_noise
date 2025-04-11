@@ -10,6 +10,7 @@ bevy_math = { version = "0.16.0-rc.3", default-features = false, features = [
 
 [dev-dependencies]
 bevy = "0.16.0-rc.3"
+criterion = "0.5"
 
 [features]
 default = ["nostd-libm"]
@@ -60,3 +61,8 @@ unused_qualifications = "warn"
 [[example]]
 name = "show_noise"
 path = "examples/show_noise.rs"
+
+[[bench]]
+name = "compare"
+path = "benches/compare/main.rs"
+harness = false
