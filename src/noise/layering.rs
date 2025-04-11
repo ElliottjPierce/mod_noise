@@ -61,6 +61,17 @@ pub trait NoiseLayerBase: Send + Sync {
             repetitions: times,
         }
     }
+
+    /// `next_octave` will come after this one.
+    /// This is done via tuples.
+    /// Note that it is often cleaner to specify layers via `(Layer1, Layer2, Layer3, ...)`
+    #[inline]
+    fn and_then<N: NoiseLayerBase>(self, next_octave: N) -> (Self, N)
+    where
+        Self: Sized,
+    {
+        (self, next_octave)
+    }
 }
 
 /// Represents a layer of some [`LayeredNoise`].
