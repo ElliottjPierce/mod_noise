@@ -7,7 +7,10 @@ use bevy_math::{
     curve::{Ease, FunctionCurve, Interval},
 };
 
-use super::{CorolatedNoiseType, NoiseValue};
+use super::{
+    CorolatedNoiseType, NoiseValue,
+    curves::{LerpCurve, Lerpable},
+};
 
 /// An `f32` in range 0..=1
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
@@ -83,6 +86,29 @@ impl CorolatedNoiseType<UNorm> for f32 {
     #[inline]
     fn map_from(value: UNorm) -> Self {
         value.get()
+    }
+}
+
+/// Linear interpolation between two [`UNorm`]s.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NormLerpCurve(LerpCurve<f32>);
+
+impl Curve<UNorm> for NormLerpCurve {
+    #[inline]
+    fn domain(&self) -> Interval {
+        Interval::UNIT
+    }
+
+    #[inline]
+    fn sample_unchecked(&self, t: f32) -> UNorm {
+        UNorm(self.0.sample_unchecked(t))
+    }
+}
+
+impl Lerpable for UNorm {
+    #[inline]
+    fn lerp_to(self, end: Self) -> impl Curve<Self> {
+        NormLerpCurve(LerpCurve::new(self.0, end.0))
     }
 }
 

@@ -2,13 +2,11 @@
 
 use core::ops::Add;
 
-use bevy_math::{
-    Curve, Vec2, Vec3, Vec3A, Vec4,
-    curve::{Ease, derivatives::SampleDerivative},
-};
+use bevy_math::{Curve, Vec2, Vec3, Vec3A, Vec4, curve::derivatives::SampleDerivative};
 
 use super::{
     DirectNoise, GradientNoise, Noise, NoiseValue,
+    curves::Lerpable,
     norm::UNorm,
     periodic::{
         DiferentiablePeriodicPoints, PeriodicPoint, PeriodicSegment, SamplablePeriodicPoints,
@@ -67,6 +65,7 @@ impl<N: Noise, C: Curve<f32> + Send + Sync> Noise for SegmentalGradientNoise<N, 
     }
 }
 
+#[inline]
 fn point_sample<P: PeriodicPoint<Relative: NoiseValue>, G: GradientGenerator<P::Relative>>(
     point: P,
     seed: u32,
@@ -89,7 +88,6 @@ impl<
     fn raw_sample(&self, input: T) -> Self::Output {
         let raw = input.get_points().sample_smooth(
             |point| point_sample(point, self.seed, &self.gradients),
-            Ease::interpolating_curve_unbounded,
             &self.smoothing_curve,
         );
         UNorm::new_unchecked((raw + 1.0) * 0.5)
@@ -102,7 +100,7 @@ impl<
         Relative: NoiseValue
                       + Add<P::Relative, Output = P::Relative>
                       + From<<T::Points as DiferentiablePeriodicPoints>::Gradient<f32>>
-                      + Ease,
+                      + Lerpable,
     >,
     G: GradientGenerator<P::Relative>,
     C: SampleDerivative<f32> + Send + Sync,
@@ -116,12 +114,10 @@ impl<
         let gradient = points.sample_gradient_smooth(
             |point| point_sample(point, self.seed, &self.gradients),
             |start, end| *end - *start,
-            Ease::interpolating_curve_unbounded,
             &self.smoothing_curve,
         );
         let value = points.sample_smooth(
             |point| point_sample(point, self.seed, &self.gradients),
-            Ease::interpolating_curve_unbounded,
             &self.smoothing_curve,
         );
         let raw_gradients = points.sample_smooth(
@@ -129,7 +125,6 @@ impl<
                 let relative = point.into_relative(self.seed);
                 self.gradients.get_gradient(relative.seed)
             },
-            Ease::interpolating_curve_unbounded,
             &self.smoothing_curve,
         );
         (

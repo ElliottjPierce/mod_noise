@@ -2,13 +2,11 @@
 
 use core::ops::Sub;
 
-use bevy_math::{
-    Curve, HasTangent,
-    curve::{Ease, derivatives::SampleDerivative},
-};
+use bevy_math::{Curve, HasTangent, curve::derivatives::SampleDerivative};
 
 use super::{
     DirectNoise, GradientNoise, Noise,
+    curves::Lerpable,
     periodic::{
         DiferentiablePeriodicPoints, PeriodicPoint, PeriodicSegment, SamplablePeriodicPoints,
     },
@@ -48,7 +46,7 @@ impl<N: Noise, C: Curve<f32> + Send + Sync> Noise for SegmentalValueNoise<N, C> 
 
 impl<
     T: PeriodicSegment<Points: SamplablePeriodicPoints>,
-    N: DirectNoise<u32, Output: Ease>,
+    N: DirectNoise<u32, Output: Lerpable>,
     C: Curve<f32> + Send + Sync,
 > DirectNoise<T> for SegmentalValueNoise<N, C>
 {
@@ -61,7 +59,6 @@ impl<
                 let point = point.into_relative(self.seed).seed;
                 self.noise.raw_sample(point)
             },
-            Ease::interpolating_curve_unbounded,
             &self.smoothing_curve,
         )
     }
@@ -69,7 +66,7 @@ impl<
 
 impl<
     T: PeriodicSegment<Points: DiferentiablePeriodicPoints>,
-    O: Ease + Copy + HasTangent<Tangent = O> + Sub<O, Output = O>,
+    O: Lerpable + Copy + HasTangent<Tangent = O> + Sub<O, Output = O>,
     N: DirectNoise<u32, Output = O>,
     C: SampleDerivative<f32> + Send + Sync,
 > GradientNoise<T> for SegmentalValueNoise<N, C>
@@ -85,7 +82,6 @@ impl<
                 self.noise.raw_sample(point)
             },
             |start, end| *end - *start,
-            Ease::interpolating_curve_unbounded,
             &self.smoothing_curve,
         );
         let value = points.sample_smooth(
@@ -93,7 +89,6 @@ impl<
                 let point = point.into_relative(self.seed).seed;
                 self.noise.raw_sample(point)
             },
-            Ease::interpolating_curve_unbounded,
             &self.smoothing_curve,
         );
         (gradient, value)

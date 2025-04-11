@@ -2,7 +2,9 @@
 
 use bevy_math::{Curve, HasTangent, curve::derivatives::SampleDerivative};
 
-use super::{DirectNoise, GradientNoise, Noise, NoiseValue, white::SeedGenerator};
+use super::{
+    DirectNoise, GradientNoise, Noise, NoiseValue, curves::Lerpable, white::SeedGenerator,
+};
 
 /// Represents a [`Noise`] that divides its domain into [`PeriodicSegment`] according to some period `T`.
 pub trait ScalableNoise<T>: Noise {
@@ -50,10 +52,9 @@ pub trait SamplablePeriodicPoints: PeriodicPoints {
     /// Interpolates between these points, producing some result.
     /// The bounds of `curve` are not checked.
     /// It is up to the caller to verify that they are valid for this domain.
-    fn sample_smooth<T, L: Curve<T>>(
+    fn sample_smooth<T: Lerpable>(
         &self,
         f: impl FnMut(Self::Point) -> T,
-        lerp: impl Fn(T, T) -> L,
         curve: &impl Curve<f32>,
     ) -> T;
 }
@@ -67,11 +68,10 @@ pub trait DiferentiablePeriodicPoints: SamplablePeriodicPoints {
     /// Interpolates between these points, producing the gradient of the interpolation.
     /// The bounds of `curve` are not checked.
     /// It is up to the caller to verify that they are valid for this domain.
-    fn sample_gradient_smooth<T: HasTangent, L: Curve<T::Tangent>>(
+    fn sample_gradient_smooth<T: HasTangent<Tangent: Lerpable>>(
         &self,
         f: impl FnMut(Self::Point) -> T,
         difference: impl Fn(&T, &T) -> T::Tangent,
-        lerp: impl Fn(T::Tangent, T::Tangent) -> L,
         curve: &impl SampleDerivative<f32>,
     ) -> Self::Gradient<T::Tangent>;
 }
