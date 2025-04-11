@@ -77,19 +77,6 @@ pub trait NoiseExt: Noise {
         self.set_scale(period);
         self
     }
-
-    /// Creates a closure that constructs this [`Noise`] and configures it via a seed.
-    #[inline]
-    fn default_with_seed() -> impl Fn(&mut SeedGenerator) -> Self
-    where
-        Self: Default,
-    {
-        |seed| {
-            let mut noise = Self::default();
-            noise.set_seed(seed);
-            noise
-        }
-    }
 }
 
 /// Represents a noise on type `I` scalable by type `P`.

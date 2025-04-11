@@ -401,17 +401,6 @@ pub struct Repeat<L> {
     pub repetitions: u32,
 }
 
-impl<L> Repeat<L> {
-    /// Constructs a new [`Repeat`].
-    #[inline]
-    pub fn new(times: u32, layer: L) -> Self {
-        Self {
-            layer,
-            repetitions: times,
-        }
-    }
-}
-
 impl<L: NoiseLayerBase> NoiseLayerBase for Repeat<L> {}
 
 impl<I, S, R, L: NoiseLayer<I, S, R>> NoiseLayer<I, S, R> for Repeat<L>
