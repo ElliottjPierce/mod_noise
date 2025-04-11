@@ -470,3 +470,21 @@ impl<S, N: Default + ScalableNoise<S>> OctaveNoiseBuilder<N, S> for DefaultAndSe
         noise
     }
 }
+
+/// A [`OctaveNoiseBuilder`] for any noise that implements [`Clone`] and [`ScalableNoise`].
+///
+/// Whatever value is here will be cloned on each sample and will then have its values set.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct CloneAndSet<N>(pub N);
+
+impl<N: Clone + Noise> OctaveNoiseBuilderBase for CloneAndSet<N> {}
+
+impl<S, N: Clone + ScalableNoise<S>> OctaveNoiseBuilder<N, S> for CloneAndSet<N> {
+    #[inline]
+    fn build(&self, seed: &mut SeedGenerator, scale: S) -> N {
+        let mut noise = self.0.clone();
+        noise.set_seed(seed);
+        noise.set_scale(scale);
+        noise
+    }
+}
