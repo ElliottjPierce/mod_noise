@@ -1,3 +1,3 @@
 # mod_noise
 
-A simple noise library built for and with Bevy.
+I might come back to this at some point, but for now, this is deprecated in favor of [noiz](https://github.com/ElliottjPierce/noiz).
